@@ -9,6 +9,10 @@
 Capture::Capture()
     : m_captureHandle(0)
 {
+    int status = snd_output_stdio_attach(&m_stdout, stdout, 0);
+    if(status < 0) {
+        LOG_ERROR("Failed to attach to stdout");
+    }
 }
 
 /******************************************************************************/
@@ -347,10 +351,12 @@ void Capture::set_hw_params()
             break;
         }
 
-//        err = snd_pcm_hw_params_current(handle, params);
-//        if(err < 0) {
-//            LOG_ERROR("snd_pcm_hw_params_current failed:%s", snd_strerror(err));
-//        }
+        snd_pcm_hw_params_dump(params, m_stdout);
+
+        status = snd_pcm_hw_params_current(handle, params);
+        if(status < 0) {
+            LOG_ERROR("snd_pcm_hw_params_current failed:%s", snd_strerror(status));
+        }
 
         status = snd_pcm_hw_params_set_rate_resample(handle, params, 0);
         if(status < 0) {
@@ -370,6 +376,7 @@ void Capture::set_hw_params()
 
         snd_pcm_format_t fmt = SND_PCM_FORMAT_S16;
 //      fmt = 
+//      SND_PCM_FORMAT_S16
         status = snd_pcm_hw_params_get_format(params, &fmt);
         if(status < 0) {
             LOG_ERROR("snd_pcm_hw_params_get_format failed:%s", snd_strerror(status));

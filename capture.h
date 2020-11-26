@@ -4,6 +4,7 @@ class Capture
 {
 private:
     snd_pcm_t * m_captureHandle;
+    snd_output_t * m_stdout;
 
     static void test_access(snd_pcm_t * handle, snd_pcm_hw_params_t * params);
     static void test_formats(snd_pcm_t * handle, snd_pcm_hw_params_t * params);
