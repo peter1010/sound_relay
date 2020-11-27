@@ -195,12 +195,11 @@ void Capture::test_access(snd_pcm_t * handle, snd_pcm_hw_params_t * params)
     };
     unsigned i;
     for(i = 0; i < sizeof(accesses)/sizeof(snd_pcm_access_t); i++) {
-        int status = snd_pcm_hw_params_test_access(handle, params, accesses[i]);
-        if(status < 0) {
-            LOG_ERROR("Access type %s is not supported: %s\n",
-                    snd_pcm_access_name(accesses[i]), snd_strerror(status));
-        } else {
-            printf("Access type %s is supported\n", snd_pcm_access_name(accesses[i]));
+        const int status = snd_pcm_hw_params_test_access(handle, params,
+                accesses[i]);
+        if(status == 0) {
+            printf("Access type %s is supported\n",
+                    snd_pcm_access_name(accesses[i]));
         }
     }
 }
@@ -251,11 +250,11 @@ void Capture::test_formats(snd_pcm_t * handle, snd_pcm_hw_params_t * params)
     }; 
     unsigned i;
     for(i = 0; i < sizeof(formats)/sizeof(snd_pcm_format_t); i++) {
-        int status = snd_pcm_hw_params_test_format(handle, params, formats[i]);
-        if(status < 0) {
-//            fprintf(stderr, "Access type %s is not supported: %s\n", snd_pcm_format_name(formats[i]), snd_strerror(rc));
-        } else {
-            printf("Format type %s is supported\n", snd_pcm_format_name(formats[i]));
+        const int status = snd_pcm_hw_params_test_format(handle, params,
+                formats[i]);
+        if(status == 0) {
+            printf("Format type %s is supported\n",
+                    snd_pcm_format_name(formats[i]));
         }
     }
 }
@@ -269,15 +268,17 @@ void Capture::test_channels(snd_pcm_t * handle, snd_pcm_hw_params_t * params)
 
     int status = snd_pcm_hw_params_get_channels_min(params, &min);
     if(status < 0) {
-	LOG_ERROR("cannot get minimum channels count: %s", snd_strerror(status));
+	LOG_ERROR("cannot get minimum channels count: %s",
+                snd_strerror(status));
 	return;
     }
     status = snd_pcm_hw_params_get_channels_max(params, &max);
     if(status < 0) {
-	LOG_ERROR("cannot get maximum channels count: %s", snd_strerror(status));
+	LOG_ERROR("cannot get maximum channels count: %s",
+                snd_strerror(status));
 	return;
     }
-    printf("Channels: %i - %i", min, max);
+    printf("Channels: %i - %i\n", min, max);
 #if 0
     for (i = min; i <= max; ++i) {
 	if (snd_pcm_hw_params_test_channels(handle, params, i) == 0)
@@ -308,27 +309,9 @@ void Capture::test_rates(snd_pcm_t * handle, snd_pcm_hw_params_t * params)
 //	fprintf(stderr, "cannot Set maximum rate: %s\n", snd_strerror(rc));
 //	return;
 //    }
-    printf("Sample rates:");
-    if (min == max) {
-	printf(" %u", min);
-    } else if (!snd_pcm_hw_params_test_rate(handle, params, min + 1, 0))
-	printf(" %u-%u", min, max);
-    else {
-#if 0
-        unsigned int i;
-        for(i = min; i < max; i++) {
-//		any_rate = 0;
-//                for (i = 0; i < ARRAY_SIZE(rates); ++i) {
-			if (!snd_pcm_hw_params_test_rate(handle, params, i, 0)) {
-//				any_rate = 1;
-				printf(" %u", i);
-			}
-    }
-//		if (!any_rate)
-//			printf(" %u-%u", min, max);
-#endif
-	}
-    putchar('\n');
+    printf("Sample rates: %i - %i\n", min, max);
+    
+// !snd_pcm_hw_params_test_rate(handle, params, min + 1, 0))
 }
 
 
@@ -351,47 +334,44 @@ void Capture::set_hw_params()
             break;
         }
 
-        snd_pcm_hw_params_dump(params, m_stdout);
-
-        status = snd_pcm_hw_params_current(handle, params);
-        if(status < 0) {
-            LOG_ERROR("snd_pcm_hw_params_current failed:%s", snd_strerror(status));
-        }
-
+        // Disable any resampling we want a clean input
         status = snd_pcm_hw_params_set_rate_resample(handle, params, 0);
         if(status < 0) {
             LOG_ERROR("Failed to disable resampling: %s\n", snd_strerror(status));
             break;
         }
 
-        test_access(handle, params);
 
+        test_access(handle, params);
+        // Set Access format
         status = snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
         if(status < 0) {
             LOG_ERROR("Failed to set access mode: %s\n", snd_strerror(status));
             break;
         }
 
+        
         test_formats(handle, params);
-
+        // Set format
         snd_pcm_format_t fmt = SND_PCM_FORMAT_S16;
-//      fmt = 
-//      SND_PCM_FORMAT_S16
-        status = snd_pcm_hw_params_get_format(params, &fmt);
+        status = snd_pcm_hw_params_set_format(handle, params, fmt);
         if(status < 0) {
-            LOG_ERROR("snd_pcm_hw_params_get_format failed:%s", snd_strerror(status));
+            LOG_ERROR("snd_pcm_hw_params_set_format failed:%s", snd_strerror(status));
         }
         else {
             LOG_INFO("format=%s", snd_pcm_format_name(fmt));
         }
+        
 
         test_channels(handle, params);
+        // Set number of channels
         status = snd_pcm_hw_params_set_channels(handle, params, 2);
         if(status < 0) {
             LOG_ERROR("Failed to set channels: %s\n", snd_strerror(status));
         }
 
-//        test_rates(handle, params);
+
+        test_rates(handle, params);
         unsigned int val = 48000;
         int dir = 0;
 
@@ -401,9 +381,17 @@ void Capture::set_hw_params()
         }
 
         printf("Set sample rate to %i\n", val);
+        snd_pcm_hw_params_dump(params, m_stdout);
 
+        // Set buffer time
+        // snd_pcm_hw_params_set_buffer_time_near()
+        // snd_pcm_hw_params_get_buffer_size()
+
+        // Set period time
         snd_pcm_uframes_t frames = 32;
         snd_pcm_hw_params_set_period_size_near(handle, params, &frames, &dir);
+
+        // snd_pcm_hw_params_get_period_size()..
 
         status = snd_pcm_hw_params(handle, params);
         if(status < 0) {
