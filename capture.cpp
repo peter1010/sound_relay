@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <alsa/asoundlib.h>
 #include <math.h>
-
+#include <dns_sd.h>
 #include "capture.h"
 #include "logging.h"
 
