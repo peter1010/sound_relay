@@ -1,9 +1,18 @@
 #include <stdio.h>
 
 #include "capture.h"
+#include "rtsp_server.h"
+#include "event_loop.h"
+#include "logging.h"
 
 int main(int argc, char * argv[])
 {
-    Capture cap;
-    cap.init();
+    set_logging_level(4);
+
+    EventLoop loop;
+    RtspServer rtsp(loop);
+
+    loop.main();
+//    Capture cap;
+//    cap.init();
 }

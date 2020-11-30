@@ -12,6 +12,7 @@ class EventLoop
 public:
     static void register_read_callback(int fd, CallbackFunc pFunc, void * arg);
     static void register_write_callback(int fd, CallbackFunc pFunc, void * arg);
+    static void unregister(int fd);
 
     static void main();
 private:
@@ -26,6 +27,7 @@ private:
         void * writeArg;
     };
    
+    static bool mPollListChanged;
     static unsigned mPollListSize;
 
     static struct pollfd mPollFdList[MAX_FD_HANDLERS];

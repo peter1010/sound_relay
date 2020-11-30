@@ -4,7 +4,8 @@ CC=gcc -c
 MAKEDEPEND=gcc -M $(CPPFLAGS)
 LINK=g++ $(LDFLAGS) -lasound -lm
 
-OBJS= capture.o event_loop.o sender.o logging.o main.o
+OBJS= capture.o event_loop.o sender.o logging.o main.o rtsp_server.o tcp_server.o \
+      tcp_connection.o
 
 .PHONY: all
 all: capture

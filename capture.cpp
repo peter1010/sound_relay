@@ -260,11 +260,10 @@ void Capture::test_formats(snd_pcm_t * handle, snd_pcm_hw_params_t * params)
 }
 
 /*****************************************************************************/
-void Capture::test_channels(snd_pcm_t * handle, snd_pcm_hw_params_t * params)
+void Capture::test_channels(snd_pcm_hw_params_t * params)
 {
     unsigned int min = 0;
     unsigned int max = 0;
-    unsigned int i;
 
     int status = snd_pcm_hw_params_get_channels_min(params, &min);
     if(status < 0) {
@@ -280,17 +279,14 @@ void Capture::test_channels(snd_pcm_t * handle, snd_pcm_hw_params_t * params)
     }
     printf("Channels: %i - %i\n", min, max);
 #if 0
-    for (i = min; i <= max; ++i) {
-	if (snd_pcm_hw_params_test_channels(handle, params, i) == 0)
-	    printf(" %u", i);
-    }
+    // snd_pcm_hw_params_test_channels(handle, params, i) == 0)
 #endif
     putchar('\n');
 }
 
 
 /*****************************************************************************/
-void Capture::test_rates(snd_pcm_t * handle, snd_pcm_hw_params_t * params)
+void Capture::test_rates(snd_pcm_hw_params_t * params)
 {
     unsigned int min = 0;
     unsigned int max = 0;
@@ -305,13 +301,9 @@ void Capture::test_rates(snd_pcm_t * handle, snd_pcm_hw_params_t * params)
 	return;
     }
 
-//    if((rc = snd_pcm_hw_params_set_rate(handle, params, max-1, 0)) < 0) {
-//	fprintf(stderr, "cannot Set maximum rate: %s\n", snd_strerror(rc));
-//	return;
-//    }
     printf("Sample rates: %i - %i\n", min, max);
     
-// !snd_pcm_hw_params_test_rate(handle, params, min + 1, 0))
+    // snd_pcm_hw_params_test_rate(handle, params, min + 1, 0))
 }
 
 
@@ -328,6 +320,8 @@ void Capture::set_hw_params()
     }
 
     do {
+	// Fill in the params structure will full possibilities of the all
+	// configurations for this device
         status = snd_pcm_hw_params_any(handle, params);
         if(status < 0) {
             LOG_ERROR("snd_pcm_hw_params_any failed:%s", snd_strerror(status));
@@ -341,7 +335,7 @@ void Capture::set_hw_params()
             break;
         }
 
-
+	// Select the access method
         test_access(handle, params);
         // Set Access format
         status = snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
@@ -350,7 +344,7 @@ void Capture::set_hw_params()
             break;
         }
 
-        
+      	// Select the format
         test_formats(handle, params);
         // Set format
         snd_pcm_format_t fmt = SND_PCM_FORMAT_S16;
@@ -362,17 +356,17 @@ void Capture::set_hw_params()
             LOG_INFO("format=%s", snd_pcm_format_name(fmt));
         }
         
-
-        test_channels(handle, params);
+	// Select number of channels
+        test_channels(params);
         // Set number of channels
         status = snd_pcm_hw_params_set_channels(handle, params, 2);
         if(status < 0) {
             LOG_ERROR("Failed to set channels: %s\n", snd_strerror(status));
         }
 
-
-        test_rates(handle, params);
-        unsigned int val = 48000;
+	// Select sample rate
+        test_rates(params);
+        unsigned int val = 44100;
         int dir = 0;
 
         status = snd_pcm_hw_params_set_rate_near(handle, params, &val, &dir);
@@ -381,44 +375,62 @@ void Capture::set_hw_params()
         }
 
         printf("Set sample rate to %i\n", val);
-        snd_pcm_hw_params_dump(params, m_stdout);
 
-        // Set buffer time
-        // snd_pcm_hw_params_set_buffer_time_near()
-        // snd_pcm_hw_params_get_buffer_size()
-
-        // Set period time
+        // Set period time (i.e. between interrupts)
         snd_pcm_uframes_t frames = 32;
-        snd_pcm_hw_params_set_period_size_near(handle, params, &frames, &dir);
+        val = 10000;   // 10 ms
+        status = snd_pcm_hw_params_set_period_time_near(handle, params, &val, &dir);
+	if(status < 0) {
+	    LOG_ERROR("Failed to set period: %s\n", snd_strerror(status));
+	}
+        printf("Set period to %i us\n", val);
 
-        // snd_pcm_hw_params_get_period_size()..
+	snd_pcm_hw_params_get_period_size(params, &m_periodSize, &dir);
 
-        status = snd_pcm_hw_params(handle, params);
+	// Set the buffer size
+	snd_pcm_uframes_t bufSize = m_periodSize * 3;
+	status = snd_pcm_hw_params_set_buffer_size_near(handle, params, &bufSize);
+	if(status < 0) {
+	    LOG_ERROR("Failed to set buffer size: %s\n", snd_strerror(status));
+	}
+	printf("Buffer size is %lu\n", bufSize);
+
+
+	status = snd_pcm_hw_params(handle, params);
         if(status < 0) {
             LOG_ERROR("Failed to set HW parameters: %s\n", snd_strerror(status));
         }
 
-        snd_pcm_hw_params_get_period_size(params, &frames, &dir);
-
+        snd_pcm_hw_params_dump(params, m_stdout);
     } while(false);
 
     snd_pcm_hw_params_free(params);
-        
-//    snd_pcm_hw_params_get_rate(const snd_pcm_hw_params_t *params, unsigned int *val, int *dir);
-//    snd_pcm_hw_params_get_rate_resample(snd_pcm_t *pcm, snd_pcm_hw_params_t *params, unsigned int *val);
-}
+}        
 
 
 void Capture::run()
 {
-    const int frames = 10;
-    short * buffer = (short *) malloc(frames * 2);
+    const int frames = 100;
+    short * buffer = (short *) malloc(frames * 4);
     double y = 0.0;
 
     snd_pcm_t * handle = m_captureHandle;
 
+    int status = snd_pcm_start(handle);
+    if(status < 0) {	
+	LOG_ERROR("Failed to start\n");
+    }
+
+    snd_pcm_state_t PrevState = SND_PCM_STATE_SETUP;
+
     while(1)
     {
+	snd_pcm_state_t state = snd_pcm_state(handle);
+	if(state != PrevState) {
+	    printf("State is %s\n", snd_pcm_state_name(state));
+	    PrevState = state;
+	}
+
         int status = snd_pcm_readi(handle, buffer, frames);
         if(status < 0)
         {
@@ -444,7 +456,7 @@ void Capture::run()
 //            printf("%f\n", value);
             y = (9999.0 * y + value * value)/10000.0;
         }
-        fprintf(stderr, "\r%015.2f\n", 10 * log10(y));
+//        fprintf(stderr, "\r%015.2f\n", 10 * log10(y));
     }
 }
 
@@ -457,5 +469,5 @@ void Capture::init()
     find_mixer("hw:0");
     open_pcm();
     set_hw_params();
-//    run();
+    run();
 }
