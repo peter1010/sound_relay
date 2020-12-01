@@ -17,6 +17,8 @@ public:
     void close_connection(TcpConnection & rConn);
 
     virtual bool parse_recv(TcpConnection & rConn) = 0;
+    virtual unsigned getMaxRecvBufLen() const = 0;
+
 protected:
     bool init(in_port_t port);
 

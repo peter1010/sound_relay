@@ -9,11 +9,28 @@
 
 
 /*----------------------------------------------------------------------------*/
+TcpConnection::TcpConnection(int sock, TcpServer & parent) : mSock(sock)
+	, mServer(parent), mpAppData(NULL), mRecvPos(0)
+{
+   mMaxRecvLen = mServer.getMaxRecvBufLen();
+   mpRecvBuf = new unsigned char[mMaxRecvLen];
+}
+
+
+/*----------------------------------------------------------------------------*/
 TcpConnection::~TcpConnection()
 {
     if(mSock >= 0) {
 	close(mSock);
 	mSock = -1;
+    }
+    if(mpRecvBuf) {
+	delete [] mpRecvBuf;
+	mpRecvBuf = NULL;
+    }
+    if(mpAppData) {
+	delete mpAppData;
+	mpAppData = NULL;
     }
 }
 
@@ -28,7 +45,7 @@ void TcpConnection::recv(void * arg)
 /*----------------------------------------------------------------------------*/
 void TcpConnection::recv()
 {
-    int status = ::recv(mSock, &mRecvBuf[mRecvPos], MAX_RECV_BUFFER-mRecvPos,
+    int status = ::recv(mSock, &mpRecvBuf[mRecvPos], mMaxRecvLen-mRecvPos,
 		    0);
     if(status <= 0) {
 	if(status < 0) {
@@ -38,10 +55,19 @@ void TcpConnection::recv()
 	mServer.close_connection(*this);
     } else {
         mRecvPos += status;
-        mRecvBuf[mRecvPos] = '\0';
 	if( !mServer.parse_recv(*this)) {
 	    LOG_ERROR("Closing connection");
 	    mServer.close_connection(*this);
 	}
     }
+}
+
+
+/*----------------------------------------------------------------------------*/
+void TcpConnection::attachAppData(ConnectionAppData * pData)
+{ 
+    if(mpAppData) {
+	delete mpAppData;
+    }
+    mpAppData = pData;
 }
