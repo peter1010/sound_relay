@@ -57,6 +57,7 @@ bool TcpServer::init(uint16_t port)
 /*----------------------------------------------------------------------------*/
 TcpServer::~TcpServer()
 {
+    LOG_DEBUG("~TcpServer");
     if(mSock) {
         close(mSock);
 	mSock = -1;
@@ -84,7 +85,7 @@ void TcpServer::accept()
     }
     char buf[INET_ADDRSTRLEN];
     LOG_INFO("Incomming request from %s", inet_ntop(AF_INET, &client.sin_addr,
-		buf, sizeof(client.sin_addr)));
+		buf, INET_ADDRSTRLEN));
     if(mpConn != NULL) {
 	close(connfd);
     } else {

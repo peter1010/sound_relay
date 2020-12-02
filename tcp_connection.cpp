@@ -20,6 +20,8 @@ TcpConnection::TcpConnection(int sock, TcpServer & parent) : mSock(sock)
 /*----------------------------------------------------------------------------*/
 TcpConnection::~TcpConnection()
 {
+    LOG_DEBUG("~TcpConnection");
+
     if(mSock >= 0) {
 	close(mSock);
 	mSock = -1;
@@ -67,6 +69,7 @@ void TcpConnection::recv()
 void TcpConnection::attachAppData(ConnectionAppData * pData)
 { 
     if(mpAppData) {
+	LOG_DEBUG("Delete old App Data");
 	delete mpAppData;
     }
     mpAppData = pData;

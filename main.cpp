@@ -7,7 +7,7 @@
 
 int main(int argc, char * argv[])
 {
-    set_logging_level(4);
+    set_logging_level(5);
 
     EventLoop loop;
     RtspServer rtsp(loop);

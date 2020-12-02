@@ -11,7 +11,7 @@ class RtspConnection : public ConnectionAppData
 public:
     RtspConnection() : mState(PARSING_REQUEST_LINE) {};
 
-    void parse_line(std::string & str);
+    void parse_line(const std::string & str);
 
 private:
     enum T_STATE
@@ -39,7 +39,9 @@ private:
 
     std::string mUrl;
 
-    void parse_request_line(std::string & str);
+    void parse_request_line(const std::string & str);
+
+    void parse_entity_header(const std::string & str);
 };
 
 
