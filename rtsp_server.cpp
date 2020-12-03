@@ -24,6 +24,8 @@ bool RtspServer::parse_recv(TcpConnection & rConn)
     if((len >= 4) && (strcmp(&pBuf[len-4], "\r\n\r\n") == 0)) {
 //	LOG_INFO("%s\n", pBuf);
 	parse_request(rConn);
+	rConn.clearRecvBuf();
+	generate_response(rConn);
     }	
     return true;
 }
@@ -62,3 +64,14 @@ void RtspServer::parse_request(TcpConnection & rConn)
     }	  
 }
 
+
+/*----------------------------------------------------------------------------*/
+void RtspServer::generate_response(TcpConnection & rConn)
+{
+    RtspConnection * pData = dynamic_cast<RtspConnection*>(rConn.getAppData());
+    if(pData) {
+        std::string response = pData->get_response();
+  	rConn.send(reinterpret_cast<const unsigned char *>(response.c_str()),
+		    response.size()); 
+    }
+}

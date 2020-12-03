@@ -12,35 +12,34 @@ public:
 
     void parse_line(const std::string & str);
 
+    std::string get_response();
+
 private:
     enum T_STATE
     {
 	PARSING_REQUEST_LINE,
-        PARSING_ENTITY_HEADERS,	    
+	PARSING_OPTIONS_REQUEST,
+	PARSING_DESCRIBE_REQUEST,
+	PARSING_SETUP_REQUEST
     };
     T_STATE mState;
 
-    enum T_REQUEST_TYPE
-    {	
-	DESCRIBE,
-	//ANNOUNCE,
-	//GET_PARAMETER,
-	OPTIONS,
-	PAUSE,
-	PLAY,
-	//RECORD,
-	//REDIRECT,
-	SETUP,
-	//SET_PARAMETER,
-	TEARDOWN
-    };
-    T_REQUEST_TYPE mRequestType;
-
-    std::string mUrl;
+    std::string mCseq;
 
     void parse_request_line(const std::string & str);
 
-    void parse_entity_header(const std::string & str);
+    void parse_options_request(const std::string & str);
+
+    std::string generate_options_response();
+
+    void parse_describe_request(const std::string & str);
+    
+    std::string generate_describe_response();
+
+    void parse_setup_request(const std::string & str);
+    
+    std::string generate_setup_response();
+
 };
 
 #endif

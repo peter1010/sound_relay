@@ -66,6 +66,13 @@ void TcpConnection::recv()
 
 
 /*----------------------------------------------------------------------------*/
+void TcpConnection::send(const unsigned char * pData, unsigned length)
+{
+    ::send(mSock, pData, length, 0);
+}
+
+
+/*----------------------------------------------------------------------------*/
 void TcpConnection::attachAppData(ConnectionAppData * pData)
 { 
     if(mpAppData) {

@@ -22,9 +22,12 @@ public:
 
     const unsigned char * getRecvBuf() const { return mpRecvBuf; };
     unsigned getRecvBufLen() const { return mRecvPos; };
+    void clearRecvBuf() { mRecvPos = 0; };
     int getSock() const { return mSock; };
 
     static void recv(void * arg);
+
+    void send(const unsigned char * pData, unsigned length);
 
     void attachAppData(ConnectionAppData * pData);
 

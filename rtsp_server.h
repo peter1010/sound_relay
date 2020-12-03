@@ -18,6 +18,8 @@ private:
 
     void parse_request(TcpConnection & rConn);
 
+    void generate_response(TcpConnection & rConn);
+
     void parse_line(TcpConnection & rConn, const char * pBuf, unsigned len);
 };
 
