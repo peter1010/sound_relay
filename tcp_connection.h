@@ -5,45 +5,42 @@ class TcpServer;
 
 
 /*----------------------------------------------------------------------------*/
-class ConnectionAppData
-{
-public:
-    virtual ~ConnectionAppData() {};
-protected:
-};
-
-
-/*----------------------------------------------------------------------------*/
 class TcpConnection
 {
 public:
     TcpConnection(int sock, TcpServer & parent);
-    ~TcpConnection();
+    virtual ~TcpConnection() = 0;
 
-    const unsigned char * getRecvBuf() const { return mpRecvBuf; };
-    unsigned getRecvBufLen() const { return mRecvPos; };
-    void clearRecvBuf() { mRecvPos = 0; };
+    typedef unsigned char Byte;
+
     int getSock() const { return mSock; };
 
     static void recv(void * arg);
 
-    void send(const unsigned char * pData, unsigned length);
+    void send(const Byte * pData, unsigned length);
 
-    void attachAppData(ConnectionAppData * pData);
-
-    ConnectionAppData * getAppData() const {return mpAppData;};
 protected:
 
     void recv();
 
+    enum T_RECV_STATE {
+        BAD_RECV,
+	NEED_MORE,
+	ALL_DONE
+    };
+
+    virtual T_RECV_STATE parse_recv(const Byte *, unsigned len) = 0;
+
 private:
     int mSock;
     TcpServer & mServer;
-    ConnectionAppData * mpAppData;
 
     unsigned char *  mpRecvBuf;
     unsigned mMaxRecvLen;
     unsigned mRecvPos;
+
+    TcpConnection(const TcpConnection &);
+    const TcpConnection & operator=(const TcpConnection &);
 };
 
 #endif

@@ -8,70 +8,29 @@
 /*----------------------------------------------------------------------------*/
 RtspServer::RtspServer(EventLoop & event_loop) : TcpServer(event_loop)
 {
+    LOG_DEBUG("RtspServer");
+
     // Start with port 554
     if(!init(554)) {
 	init(8554);
     }
+    register_connection_factory(RtspServer::connection_factory);
 }
 
 
 /*----------------------------------------------------------------------------*/
-bool RtspServer::parse_recv(TcpConnection & rConn)
+RtspServer::~RtspServer() 
 {
-    const char * pBuf = reinterpret_cast<const char *>(rConn.getRecvBuf());
-    unsigned len = rConn.getRecvBufLen();
-
-    if((len >= 4) && (strcmp(&pBuf[len-4], "\r\n\r\n") == 0)) {
-//	LOG_INFO("%s\n", pBuf);
-	parse_request(rConn);
-	rConn.clearRecvBuf();
-	generate_response(rConn);
-    }	
-    return true;
+    LOG_DEBUG("~RtspServer");
 }
 
 
 /*----------------------------------------------------------------------------*/
-void RtspServer::parse_request(TcpConnection & rConn)
-{	
-    const char * p = reinterpret_cast<const char *>(rConn.getRecvBuf());
-    unsigned left = rConn.getRecvBufLen();
-    RtspConnection * pData = dynamic_cast<RtspConnection*>(rConn.getAppData());
-
-    if(!pData) {
-       LOG_DEBUG("Creating a RTSP Connection");
-       pData = new RtspConnection;
-       rConn.attachAppData(pData);
-    }
-
-    // Split up into lines to parse
-    while(left > 0) {
-	while(((*p == '\r') || (*p == '\n')) && (left > 0)) {
-	    ++p;
-	    left--;
-	}
-	const char * q = p;
-	while((*q != '\r') && (*q != '\n') && (left > 0)) {
-	    ++q;
-	    left--;
-	}
-	const unsigned lineLen = q - p;
-	if(lineLen > 0) {
-	    std::string str(p, lineLen);
-	    pData->parse_line(str);
-	}
-	p = q;
-    }	  
-}
-
-
-/*----------------------------------------------------------------------------*/
-void RtspServer::generate_response(TcpConnection & rConn)
+TcpConnection * RtspServer::connection_factory(int sock, TcpServer & parent)
 {
-    RtspConnection * pData = dynamic_cast<RtspConnection*>(rConn.getAppData());
-    if(pData) {
-        std::string response = pData->get_response();
-  	rConn.send(reinterpret_cast<const unsigned char *>(response.c_str()),
-		    response.size()); 
-    }
+    return new RtspConnection(sock, parent);
 }
+
+
+
+

@@ -15,6 +15,32 @@ int rtpSock = socket(AF_INET, SOCK_DGRAM, 0);
 int rtcpSock = socket(AF_INET, SOCK_DGRAM. 0);
 #endif
 
+
+/*----------------------------------------------------------------------------*/
+TcpServer::TcpServer(EventLoop & rEventLoop) 
+	: mEventLoop(rEventLoop), mSock(-1)
+	, mpConn(NULL), mpConnectionFactory(NULL) 
+{
+    LOG_DEBUG("TcpServer");
+}
+
+
+/*----------------------------------------------------------------------------*/
+TcpServer::~TcpServer()
+{
+    LOG_DEBUG("~TcpServer");
+    if(mpConn) {
+        close_connection(*mpConn);
+	mpConn = NULL;
+    }
+    if(mSock) {
+        close(mSock);
+	mSock = -1;
+    }
+}
+
+
+
 /*----------------------------------------------------------------------------*/
 bool TcpServer::init(uint16_t port) 
 {
@@ -55,14 +81,11 @@ bool TcpServer::init(uint16_t port)
 
 
 /*----------------------------------------------------------------------------*/
-TcpServer::~TcpServer()
+void TcpServer::register_connection_factory(ConnectionFactory pFunc)
 {
-    LOG_DEBUG("~TcpServer");
-    if(mSock) {
-        close(mSock);
-	mSock = -1;
-    }
+    mpConnectionFactory = pFunc;;
 }
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -86,11 +109,16 @@ void TcpServer::accept()
     char buf[INET_ADDRSTRLEN];
     LOG_INFO("Incomming request from %s", inet_ntop(AF_INET, &client.sin_addr,
 		buf, INET_ADDRSTRLEN));
-    if(mpConn != NULL) {
-	close(connfd);
+
+    if(mpConnectionFactory) {
+	if(mpConn) {
+	    close(connfd);
+        } else {
+	    mpConn = mpConnectionFactory(connfd, *this);
+   	    mEventLoop.register_read_callback(connfd, TcpConnection::recv, mpConn);
+	}
     } else {
-	mpConn = new TcpConnection(connfd, *this);
-   	mEventLoop.register_read_callback(connfd, TcpConnection::recv, mpConn);
+        LOG_ERROR("No registered Connection factory");
     }	
 }
 
@@ -98,9 +126,8 @@ void TcpServer::accept()
 /*----------------------------------------------------------------------------*/
 void TcpServer::close_connection(TcpConnection & rConn)
 {
-    LOG_INFO("Here1\n");
+    LOG_INFO("close_connection");
     mEventLoop.unregister(rConn.getSock());
-    LOG_INFO("Here2\n");
     delete &rConn;
     mpConn = NULL;
 }

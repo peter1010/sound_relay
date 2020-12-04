@@ -10,9 +10,9 @@
 
 /*----------------------------------------------------------------------------*/
 TcpConnection::TcpConnection(int sock, TcpServer & parent) : mSock(sock)
-	, mServer(parent), mpAppData(NULL), mRecvPos(0)
+	, mServer(parent), mRecvPos(0)
 {
-   mMaxRecvLen = mServer.getMaxRecvBufLen();
+   mMaxRecvLen = mServer.get_max_recv_len();
    mpRecvBuf = new unsigned char[mMaxRecvLen];
 }
 
@@ -29,10 +29,6 @@ TcpConnection::~TcpConnection()
     if(mpRecvBuf) {
 	delete [] mpRecvBuf;
 	mpRecvBuf = NULL;
-    }
-    if(mpAppData) {
-	delete mpAppData;
-	mpAppData = NULL;
     }
 }
 
@@ -57,10 +53,14 @@ void TcpConnection::recv()
 	mServer.close_connection(*this);
     } else {
         mRecvPos += status;
-	if( !mServer.parse_recv(*this)) {
+
+	const T_RECV_STATE state = parse_recv(mpRecvBuf, mRecvPos);
+	if(state == BAD_RECV) {
 	    LOG_ERROR("Closing connection");
 	    mServer.close_connection(*this);
-	}
+	} else if(state == ALL_DONE) {
+	    mRecvPos = 0;
+	} // MORE_DATA
     }
 }
 
@@ -71,13 +71,3 @@ void TcpConnection::send(const unsigned char * pData, unsigned length)
     ::send(mSock, pData, length, 0);
 }
 
-
-/*----------------------------------------------------------------------------*/
-void TcpConnection::attachAppData(ConnectionAppData * pData)
-{ 
-    if(mpAppData) {
-	LOG_DEBUG("Delete old App Data");
-	delete mpAppData;
-    }
-    mpAppData = pData;
-}

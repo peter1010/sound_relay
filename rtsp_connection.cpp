@@ -5,6 +5,62 @@
 #include "logging.h"
 #include "rtsp_connection.h"
 
+
+/*----------------------------------------------------------------------------*/
+RtspConnection::RtspConnection(int sock, TcpServer & parent) : TcpConnection(sock, parent),
+       	mState(PARSING_REQUEST_LINE), mRtpPort(49176)
+{
+    mSession = "123456";
+}
+
+
+/*----------------------------------------------------------------------------*/
+RtspConnection::T_RECV_STATE RtspConnection::parse_recv(const Byte * pData, unsigned len)
+{
+    T_RECV_STATE retVal = NEED_MORE;
+
+    const char * p = reinterpret_cast<const char *>(pData);
+
+    if((len >= 4) && (strcmp(&p[len-4], "\r\n\r\n") == 0)) {
+    	unsigned left = len;
+        
+	// Split up into lines to parse
+	while(left > 0) {
+	    while(((*p == '\r') || (*p == '\n')) && (left > 0)) {
+	    	++p;
+	    	left--;
+	    }
+
+	    const char * q = p;
+	    while((*q != '\r') && (*q != '\n') && (left > 0)) {
+	    	++q;
+	    	left--;
+	    }
+	    const unsigned lineLen = q - p;
+	    if(lineLen > 0) {
+	        std::string str(p, lineLen);
+	        parse_line(str);
+	    }
+	    p = q;
+        }	  
+//	LOG_INFO("%s\n", pData);
+	generate_response();
+	retVal = ALL_DONE;
+    }	
+    return retVal;
+}
+
+
+/*----------------------------------------------------------------------------*/
+void RtspConnection::generate_response()
+{
+     std::string response = get_response();
+     send(reinterpret_cast<const unsigned char *>(response.c_str()),
+		    response.size()); 
+}
+
+
+
 /*----------------------------------------------------------------------------*/
 void RtspConnection::parse_line(const std::string & str)
 {
@@ -19,6 +75,9 @@ void RtspConnection::parse_line(const std::string & str)
 	    break;
 	case PARSING_DESCRIBE_REQUEST:
 	    parse_describe_request(str);
+	    break;
+	case PARSING_SETUP_REQUEST:
+	    parse_setup_request(str);
 	    break;
     }
 }
@@ -38,8 +97,12 @@ std::string RtspConnection::get_response()
 	case PARSING_DESCRIBE_REQUEST:
 	    retVal = generate_describe_response();
 	    break;
+	case PARSING_SETUP_REQUEST:
+	    retVal = generate_setup_response();
+	    break;
     }
     mState = PARSING_REQUEST_LINE;
+    LOG_DEBUG("%s", retVal.c_str());
     return retVal;
 }
 
@@ -85,6 +148,9 @@ void RtspConnection::parse_request_line(const std::string & str)
 	    mState = PARSING_DESCRIBE_REQUEST;
 	} else if(request == "SETUP") {
 	    mState = PARSING_SETUP_REQUEST;
+	} else {
+	    LOG_ERROR("Unknown request %s", request.c_str());
+	    // TODO
 	}
     }
 }
@@ -125,7 +191,7 @@ void RtspConnection::parse_options_request(const std::string & str)
 std::string RtspConnection::generate_options_response()
 {
     return std::string("RTSP/1.0 200 OK\r\nCSeq: ") + mCseq + "\r\n"
-	"Public: DESCRIBE, SETUP, TEARDOWN, PLAY\r\n\r\n";
+	"Public: DESCRIBE, SETUP, PLAY, TEARDOWN\r\n\r\n";
 }
 
 /*----------------------------------------------------------------------------*/
@@ -138,7 +204,12 @@ void RtspConnection::parse_describe_request(const std::string & str)
 	// CSeq
 	if(name == "cseq") {
 	    mCseq = value;
-        }
+        } else if(name == "accept") {
+	    // Check that application/sdp is an option
+	    if(value.find("application/sdp") == std::string::npos) {
+		// TODO
+            }
+	}
     }	
 }
 
@@ -146,24 +217,91 @@ void RtspConnection::parse_describe_request(const std::string & str)
 /*----------------------------------------------------------------------------*/
 std::string RtspConnection::generate_describe_response()
 {
+    // Mandatory fields:
+    // CSeq:
+    // Content-type:
+    // Content-Length;
+
+    // SDP fields
     // v= (protocol version)
     // o = (origintator and session identifier)
     // s = (session name)
     // t = (time the session is active)
     // m = (media name and transport address)
-    std::string sdp = "v=0\r\no=- SESS-ID SESS-VER IN IP4 10.0.0.1\r\n" \
-	    "s=TV\r\nt=0 0\r\nm=audio 49170 RTP/AVP 31\r\n";
+    std::string sdp = "v=0\r\n" \
+	    "o=- SESS-ID SESS-VER IN IP4 10.0.0.1\r\n" \
+	    "s=TV\r\n" \
+	    "t=0 0\r\n" \
+	    "m=audio " + std::to_string(mRtpPort) +" RTP/AVP 31\r\n";
 
-    return std::string("RTSP/1.0 200 OK\r\nCSeq: ") + mCseq + "\r\n" \
-	"Content-Type: application/sdp\r\n" \
-	"Content-Length: " + std::to_string(sdp.size()) + "\r\n\r\n" + sdp;
-#if 0
-    static const char templat[] = "RTSP/1.0 200 OK\r\nCSeq: %s\r\n"
-	"Public: DESCRIBE, SETUP, TEARDOWN, PLAY\r\n\r\n";
-    unsigned len = mCseq.size() + strlen(templat);
-    unsigned char * p = new unsigned char[len];
-    sprintf((char *)p, templat, mCseq.c_str());
-    LOG_DEBUG("%s", p);
-    return p;
-#endif
+    return std::string("RTSP/1.0 200 OK\r\n"\
+	    "CSeq: ") + mCseq + "\r\n" \
+	    "Content-Type: application/sdp\r\n" \
+	    "Content-Length: " + std::to_string(sdp.size()) + "\r\n\r\n" + sdp;
 }
+
+
+/*----------------------------------------------------------------------------*/
+void RtspConnection::parse_setup_request(const std::string & str)
+{
+    std::string name;
+    std::string value;
+
+    if(split_name_value_pair(str, name, value)) {
+	// CSeq
+	if(name == "cseq") {
+	    mCseq = value;
+        } else if(name == "transport") {
+  	    std::size_t idx = value.find(";");
+	    std::string proto;
+
+	    if(idx != std::string::npos) {
+		proto = value.substr(0, idx);
+	    } else {
+		proto = value;
+	    }
+	    LOG_DEBUG("proto=%s", proto.c_str());
+	
+	    // Transport fields are separated with semi-colons.
+	    while(idx != std::string::npos) {
+		std::size_t idx2 = value.find(";", idx+1);
+		std::string token;
+		if(idx != std::string::npos) {
+		    token = value.substr(idx+1, idx2-idx);
+		} else {
+		    token = value.substr(idx+1);
+		}
+		// Break up the token
+		std::size_t idx3 = token.find("=", idx+1);
+		std::string subName;
+		std::string subValue;
+		if(idx3 != std::string::npos) {
+		    subName = value.substr(idx, idx3-idx);
+		    subValue = token.substr(idx3+1, idx2-idx3-1);
+		} else {
+		    subName = value.substr(idx, idx2-idx);
+		}
+		idx = idx2;
+		LOG_DEBUG("%s=%s", subName.c_str(), subValue.c_str());
+            }
+	}
+    }	
+}
+
+
+/*----------------------------------------------------------------------------*/
+std::string RtspConnection::generate_setup_response()
+{
+    // Mandatory fields:
+    // CSeq:
+    // Session:
+    // Transport:
+    std::string transport = "RTP/AVP;unicast;client_port=4688-4589;server_port=6356-6257";
+
+    return std::string("RTSP/1.0 200 OK\r\n" \
+        "CSeq: ") + mCseq + "\r\n" \
+	"Session: " + mSession + "\r\n" \
+	"Transport: " + transport + "\r\n\r\n";
+}
+
+

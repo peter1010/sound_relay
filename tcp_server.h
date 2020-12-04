@@ -3,33 +3,43 @@
 
 #include <netinet/ip.h>
 
-class TcpConnection;
 class EventLoop;
+class TcpConnection;
+class TcpServer;
+
+typedef TcpConnection * (* ConnectionFactory)(int, TcpServer &);
 
 /*----------------------------------------------------------------------------*/
 class TcpServer
 {
 public:
-    TcpServer(EventLoop & event_loop) : mEventLoop(event_loop), mSock(-1),
-       		mpConn(NULL) {};
-    virtual ~TcpServer();
+    TcpServer(EventLoop & rEventLoop);
+
+    virtual ~TcpServer() = 0;
+
+    virtual unsigned get_max_recv_len() const = 0;
 
     void close_connection(TcpConnection & rConn);
 
-    virtual bool parse_recv(TcpConnection & rConn) = 0;
-    virtual unsigned getMaxRecvBufLen() const = 0;
+    // Should be called from sub-class to register a connection object creation
+    // function.
+    void register_connection_factory(ConnectionFactory pFunc);
 
 protected:
     bool init(in_port_t port);
 
     static void accept(void * arg);
     void accept();
-
  
 private:
     EventLoop & mEventLoop;
     int mSock;
     TcpConnection * mpConn;
+    ConnectionFactory mpConnectionFactory;
+
+    
+    TcpServer(const TcpServer &);
+    TcpServer & operator=(const TcpServer &);
 };
 
 #endif

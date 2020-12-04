@@ -10,17 +10,15 @@ class RtspServer : public TcpServer
 public:
     RtspServer(EventLoop & event_loop);
 
+    ~RtspServer();
+
+    unsigned get_max_recv_len() const {return 1024;};
+
+protected:
+
+    static TcpConnection * connection_factory(int, TcpServer &);
+
 private:
-
-    bool parse_recv(TcpConnection & rConn);
-
-    unsigned getMaxRecvBufLen() const {return 1024;};
-
-    void parse_request(TcpConnection & rConn);
-
-    void generate_response(TcpConnection & rConn);
-
-    void parse_line(TcpConnection & rConn, const char * pBuf, unsigned len);
 };
 
 #endif
