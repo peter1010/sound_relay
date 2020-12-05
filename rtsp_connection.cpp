@@ -1,4 +1,6 @@
 #include <string.h>
+#include <time.h>
+
 #include <string>
 #include <algorithm>
 
@@ -7,22 +9,27 @@
 
 
 /*----------------------------------------------------------------------------*/
-RtspConnection::RtspConnection(int sock, TcpServer & parent) : TcpConnection(sock, parent),
-       	mState(PARSING_REQUEST_LINE), mRtpPort(49176)
+RtspConnection::RtspConnection(int sock, TcpServer & parent) 
+	: TcpConnection(sock, parent), mState(PARSING_REQUEST_LINE)
 {
     mSession = "123456";
+
+    mServerRtpPort = 49176;
+    mServerRtcpPort = mServerRtpPort + 1;
 }
 
 
 /*----------------------------------------------------------------------------*/
-RtspConnection::T_RECV_STATE RtspConnection::parse_recv(const Byte * pData, unsigned len)
+int RtspConnection::parse_recv(const Byte * pData, unsigned len)
 {
-    T_RECV_STATE retVal = NEED_MORE;
+    int retVal = 0;
 
     const char * p = reinterpret_cast<const char *>(pData);
+    const char * end = reinterpret_cast<const char *>(memmem(reinterpret_cast<const void *>(p), len, "\r\n\r\n", 4));
 
-    if((len >= 4) && (strcmp(&p[len-4], "\r\n\r\n") == 0)) {
-    	unsigned left = len;
+    if(end) {
+	const unsigned size = (end - p);
+    	unsigned left = size;
         
 	// Split up into lines to parse
 	while(left > 0) {
@@ -45,8 +52,10 @@ RtspConnection::T_RECV_STATE RtspConnection::parse_recv(const Byte * pData, unsi
         }	  
 //	LOG_INFO("%s\n", pData);
 	generate_response();
-	retVal = ALL_DONE;
-    }	
+	retVal = size + 4;
+    } else {
+        LOG_DEBUG("%i %i %i %i", pData[len-4], pData[len-3], pData[len-2], pData[len-1]);
+    }
     return retVal;
 }
 
@@ -79,6 +88,9 @@ void RtspConnection::parse_line(const std::string & str)
 	case PARSING_SETUP_REQUEST:
 	    parse_setup_request(str);
 	    break;
+	case PARSING_PLAY_REQUEST:
+	    parse_play_request(str);
+	    break;
     }
 }
 
@@ -99,6 +111,9 @@ std::string RtspConnection::get_response()
 	    break;
 	case PARSING_SETUP_REQUEST:
 	    retVal = generate_setup_response();
+	    break;
+	case PARSING_PLAY_REQUEST:
+	    retVal = generate_play_response();
 	    break;
     }
     mState = PARSING_REQUEST_LINE;
@@ -138,9 +153,9 @@ void RtspConnection::parse_request_line(const std::string & str)
 	std::string url = trim(str1.substr(idx1, idx2-idx1));
 	std::string version = str1.substr(idx2+1);
 
-	LOG_DEBUG("Request = %s", request.c_str());
-	LOG_DEBUG("URL = %s", url.c_str());
-	LOG_DEBUG("Version = %s", version.c_str());
+//	LOG_DEBUG("Request = %s", request.c_str());
+//	LOG_DEBUG("URL = %s", url.c_str());
+//	LOG_DEBUG("Version = %s", version.c_str());
 
 	if(request == "OPTIONS") {
 	    mState = PARSING_OPTIONS_REQUEST;
@@ -148,6 +163,8 @@ void RtspConnection::parse_request_line(const std::string & str)
 	    mState = PARSING_DESCRIBE_REQUEST;
 	} else if(request == "SETUP") {
 	    mState = PARSING_SETUP_REQUEST;
+	} else if(request == "PLAY") {
+	    mState = PARSING_PLAY_REQUEST;
 	} else {
 	    LOG_ERROR("Unknown request %s", request.c_str());
 	    // TODO
@@ -229,15 +246,17 @@ std::string RtspConnection::generate_describe_response()
     // t = (time the session is active)
     // m = (media name and transport address)
     std::string sdp = "v=0\r\n" \
-	    "o=- SESS-ID SESS-VER IN IP4 10.0.0.1\r\n" \
-	    "s=TV\r\n" \
-	    "t=0 0\r\n" \
-	    "m=audio " + std::to_string(mRtpPort) +" RTP/AVP 31\r\n";
+	    "o=- SESS-ID SESS-VER IN IP4 192.168.10.51\r\n" \
+	    "s=TV Session\r\n" \
+	    "i=Sound from the TV\r\n" \
+	    "t=" + std::to_string(time(NULL)-3000) + " " + std::to_string(time(NULL)+3000) + "\r\n" \
+	    "m=audio " + std::to_string(mServerRtpPort) +" RTP/AVP 0\r\n";
 
     return std::string("RTSP/1.0 200 OK\r\n"\
 	    "CSeq: ") + mCseq + "\r\n" \
 	    "Content-Type: application/sdp\r\n" \
-	    "Content-Length: " + std::to_string(sdp.size()) + "\r\n\r\n" + sdp;
+	    "Content-Length: " + std::to_string(sdp.size()) + "\r\n\r\n" 
+	    + sdp;
 }
 
 
@@ -264,25 +283,36 @@ void RtspConnection::parse_setup_request(const std::string & str)
 	
 	    // Transport fields are separated with semi-colons.
 	    while(idx != std::string::npos) {
-		std::size_t idx2 = value.find(";", idx+1);
-		std::string token;
-		if(idx != std::string::npos) {
-		    token = value.substr(idx+1, idx2-idx);
-		} else {
-		    token = value.substr(idx+1);
-		}
-		// Break up the token
-		std::size_t idx3 = token.find("=", idx+1);
+		const std::size_t idx2 = value.find(";", idx+1);
+		const std::size_t idx3 = value.find("=", idx+1);
+
 		std::string subName;
 		std::string subValue;
-		if(idx3 != std::string::npos) {
-		    subName = value.substr(idx, idx3-idx);
-		    subValue = token.substr(idx3+1, idx2-idx3-1);
+		if(idx2 != std::string::npos) {
+		    if((idx3 != std::string::npos) && (idx3 < idx2)) {
+ 		        subName = value.substr(idx+1, idx3-idx-1);
+			subValue = value.substr(idx3+1, idx2-idx3-1);
+		    } else {
+			subName = value.substr(idx+1, idx2-idx-1);
+		    }
+		} else if(idx3 != std::string::npos) {
+ 		    subName = value.substr(idx+1, idx3-idx-1);
+		    subValue = value.substr(idx3+1);
 		} else {
-		    subName = value.substr(idx, idx2-idx);
+		    subName = value.substr(idx+1);
 		}
 		idx = idx2;
 		LOG_DEBUG("%s=%s", subName.c_str(), subValue.c_str());
+		if(subName == "client_port") {
+		    const std::size_t idx4 = subValue.find("-");
+		    if(idx4 != std::string::npos) {
+			mClientRtpPort = std::stoi(subValue.substr(0, idx4));
+			mClientRtcpPort = std::stoi(subValue.substr(idx4+1));
+		    } else {
+			mClientRtpPort = std::stoi(subValue);
+			mClientRtcpPort = mClientRtpPort + 1;
+		    }
+		}
             }
 	}
     }	
@@ -296,12 +326,44 @@ std::string RtspConnection::generate_setup_response()
     // CSeq:
     // Session:
     // Transport:
-    std::string transport = "RTP/AVP;unicast;client_port=4688-4589;server_port=6356-6257";
+    std::string transport = "RTP/AVP/UDP;unicast;" \
+	"client_port=" + std::to_string(mClientRtpPort) + "-"
+       	+ std::to_string(mClientRtcpPort) + ";"\
+	"server_port=" + std::to_string(mServerRtpPort) + "-"
+	+ std::to_string(mServerRtcpPort);
 
     return std::string("RTSP/1.0 200 OK\r\n" \
         "CSeq: ") + mCseq + "\r\n" \
 	"Session: " + mSession + "\r\n" \
 	"Transport: " + transport + "\r\n\r\n";
 }
+
+
+/*----------------------------------------------------------------------------*/
+void RtspConnection::parse_play_request(const std::string & str)
+{
+    std::string name;
+    std::string value;
+
+    if(split_name_value_pair(str, name, value)) {
+	// CSeq
+	if(name == "cseq") {
+	    mCseq = value;
+        } else if(name == "range") {
+	}
+    }	
+}
+
+
+/*----------------------------------------------------------------------------*/
+std::string RtspConnection::generate_play_response()
+{
+    // Mandatory fields:
+    // CSeq:
+    
+    return std::string("RTSP/1.0 200 OK\r\n" \
+        "CSeq: ") + mCseq + "\r\n\r\n";
+}
+
 
 

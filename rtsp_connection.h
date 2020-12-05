@@ -18,7 +18,7 @@ public:
 
 protected:
 
-    virtual T_RECV_STATE parse_recv(const Byte * data, unsigned len);
+    virtual int parse_recv(const Byte * data, unsigned len);
 
     void parse_request_line(const std::string & str);
 
@@ -34,6 +34,9 @@ protected:
     
     std::string generate_setup_response();
 
+    void parse_play_request(const std::string & str);
+    
+    std::string generate_play_response();
 
 private:
     enum T_STATE
@@ -41,16 +44,20 @@ private:
 	PARSING_REQUEST_LINE,
 	PARSING_OPTIONS_REQUEST,
 	PARSING_DESCRIBE_REQUEST,
-	PARSING_SETUP_REQUEST
+	PARSING_SETUP_REQUEST,
+	PARSING_PLAY_REQUEST,
     };
     T_STATE mState;
 
     std::string mCseq;
        	
-    unsigned short mRtpPort;
-
     std::string mSession;
 
+    unsigned short mClientRtpPort;
+    unsigned short mServerRtpPort;
+
+    unsigned short mClientRtcpPort;
+    unsigned short mServerRtcpPort;
 };
 
 #endif

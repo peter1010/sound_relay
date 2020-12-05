@@ -23,13 +23,8 @@ protected:
 
     void recv();
 
-    enum T_RECV_STATE {
-        BAD_RECV,
-	NEED_MORE,
-	ALL_DONE
-    };
-
-    virtual T_RECV_STATE parse_recv(const Byte *, unsigned len) = 0;
+    // -1 means issue > 0 means discard that number from the buffer
+    virtual int parse_recv(const Byte *, unsigned len) = 0;
 
 private:
     int mSock;

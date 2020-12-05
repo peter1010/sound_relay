@@ -54,13 +54,14 @@ void TcpConnection::recv()
     } else {
         mRecvPos += status;
 
-	const T_RECV_STATE state = parse_recv(mpRecvBuf, mRecvPos);
-	if(state == BAD_RECV) {
+	const int discard = parse_recv(mpRecvBuf, mRecvPos);
+	if(discard < 0) {
 	    LOG_ERROR("Closing connection");
 	    mServer.close_connection(*this);
-	} else if(state == ALL_DONE) {
-	    mRecvPos = 0;
-	} // MORE_DATA
+	} else if(discard > 0) {
+	    mRecvPos -= discard;
+	    memmove(mpRecvBuf, &mpRecvBuf[discard], mRecvPos);
+	}
     }
 }
 
