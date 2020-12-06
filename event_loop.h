@@ -10,14 +10,14 @@ typedef void (*CallbackFunc)(void * arg);
 class EventLoop
 {
 public:
-    static void register_read_callback(int fd, CallbackFunc pFunc, void * arg);
-    static void register_write_callback(int fd, CallbackFunc pFunc, void * arg);
+    static bool register_read_callback(int fd, CallbackFunc pFunc, void * arg);
+    static bool register_write_callback(int fd, CallbackFunc pFunc, void * arg);
     static void unregister(int fd);
 
     static void main();
 private:
     
-    static void register_callback(int fd, CallbackFunc pReadFunc, void * readArg,
+    static bool register_callback(int fd, CallbackFunc pReadFunc, void * readArg,
         CallbackFunc pWriteFunc, void * writeArg);
 
     struct CallbackEntry {

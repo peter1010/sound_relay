@@ -1,39 +1,31 @@
 #ifndef _TCP_CONNECTION_H_
 #define _TCP_CONNECTION_H_
 
-class TcpServer;
-
+#include "connection.h"
 
 /*----------------------------------------------------------------------------*/
-class TcpConnection
+class TcpConnection : public Connection
 {
 public:
-    TcpConnection(int sock, TcpServer & parent);
+    TcpConnection();
     virtual ~TcpConnection() = 0;
-
-    typedef unsigned char Byte;
-
-    int getSock() const { return mSock; };
-
-    static void recv(void * arg);
-
-    void send(const Byte * pData, unsigned length);
 
 protected:
 
-    void recv();
+    // Registered with the event loop
+    bool recv();
 
     // -1 means issue > 0 means discard that number from the buffer
     virtual int parse_recv(const Byte *, unsigned len) = 0;
 
-private:
-    int mSock;
-    TcpServer & mServer;
+    void send(const Byte * pData, unsigned length);
 
-    unsigned char *  mpRecvBuf;
-    unsigned mMaxRecvLen;
+private:
+
+    // Receive buffer position
     unsigned mRecvPos;
 
+    // Hide the default methods
     TcpConnection(const TcpConnection &);
     const TcpConnection & operator=(const TcpConnection &);
 };

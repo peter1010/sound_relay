@@ -3,20 +3,20 @@
 
 #include "tcp_server.h"
 
-class TcpConnection;
+class Connection;
 
 class RtspServer : public TcpServer
 {
 public:
     RtspServer(EventLoop & event_loop);
 
-    ~RtspServer();
+    virtual ~RtspServer();
 
     unsigned get_max_recv_len() const {return 1024;};
 
 protected:
 
-    static TcpConnection * connection_factory(int, TcpServer &);
+    static Connection * connection_factory();
 
 private:
 };

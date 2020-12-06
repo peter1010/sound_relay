@@ -9,8 +9,7 @@
 
 
 /*----------------------------------------------------------------------------*/
-RtspConnection::RtspConnection(int sock, TcpServer & parent) 
-	: TcpConnection(sock, parent), mState(PARSING_REQUEST_LINE)
+RtspConnection::RtspConnection() :  mState(PARSING_REQUEST_LINE)
 {
     mSession = "123456";
 

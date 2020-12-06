@@ -8,18 +8,10 @@
 #include "event_loop.h"
 #include "tcp_connection.h"
 
-#if 0
-
-int rtpSock = socket(AF_INET, SOCK_DGRAM, 0);
-
-int rtcpSock = socket(AF_INET, SOCK_DGRAM. 0);
-#endif
-
 
 /*----------------------------------------------------------------------------*/
 TcpServer::TcpServer(EventLoop & rEventLoop) 
-	: mEventLoop(rEventLoop), mSock(-1)
-	, mpConn(NULL), mpConnectionFactory(NULL) 
+	: Network(rEventLoop), mSock(-1)
 {
     LOG_DEBUG("TcpServer");
 }
@@ -28,13 +20,8 @@ TcpServer::TcpServer(EventLoop & rEventLoop)
 /*----------------------------------------------------------------------------*/
 TcpServer::~TcpServer()
 {
-    LOG_DEBUG("~TcpServer");
-    if(mpConn) {
-        close_connection(*mpConn);
-	mpConn = NULL;
-    }
     if(mSock) {
-        close(mSock);
+        ::close(mSock);
 	mSock = -1;
     }
 }
@@ -42,7 +29,7 @@ TcpServer::~TcpServer()
 
 
 /*----------------------------------------------------------------------------*/
-bool TcpServer::init(uint16_t port) 
+bool TcpServer::init(in_port_t port, in_addr_t address) 
 {
     struct sockaddr_in addr;
 
@@ -50,6 +37,7 @@ bool TcpServer::init(uint16_t port)
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if(sock < 0) {
         LOG_ERRNO_AS_ERROR("Failed to open TCP socket");
+	return false;
     }
 
     // setsockopt();
@@ -58,7 +46,7 @@ bool TcpServer::init(uint16_t port)
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_addr.s_addr = htonl(address);
 
     int status = bind(sock, reinterpret_cast<struct sockaddr *>(&addr), 
 	    sizeof(addr));
@@ -74,18 +62,10 @@ bool TcpServer::init(uint16_t port)
 	close(sock);
 	return false;
    }
-   mEventLoop.register_read_callback(sock, TcpServer::accept, this);
+   get_event_loop().register_read_callback(sock, TcpServer::accept, this);
    mSock = sock;
    return true;
 }
-
-
-/*----------------------------------------------------------------------------*/
-void TcpServer::register_connection_factory(ConnectionFactory pFunc)
-{
-    mpConnectionFactory = pFunc;;
-}
-
 
 
 /*----------------------------------------------------------------------------*/
@@ -110,25 +90,13 @@ void TcpServer::accept()
     LOG_INFO("Incomming request from %s", inet_ntop(AF_INET, &client.sin_addr,
 		buf, INET_ADDRSTRLEN));
 
-    if(mpConnectionFactory) {
-	if(mpConn) {
-	    close(connfd);
-        } else {
-	    mpConn = mpConnectionFactory(connfd, *this);
-   	    mEventLoop.register_read_callback(connfd, TcpConnection::recv, mpConn);
-	}
+    if(create_connection()) {
+	if(!get_connection()->attach(connfd, *this, client, get_event_loop())) {
+            LOG_ERROR("Failed to attach connection");
+	    delete_connection();
+        }
     } else {
-        LOG_ERROR("No registered Connection factory");
+	::close(connfd);
     }	
-}
-
-
-/*----------------------------------------------------------------------------*/
-void TcpServer::close_connection(TcpConnection & rConn)
-{
-    LOG_INFO("close_connection");
-    mEventLoop.unregister(rConn.getSock());
-    delete &rConn;
-    mpConn = NULL;
 }
 

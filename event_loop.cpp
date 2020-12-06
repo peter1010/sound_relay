@@ -15,27 +15,27 @@ EventLoop::CallbackEntry EventLoop::mPollCallbackList[MAX_FD_HANDLERS];
 struct pollfd EventLoop::mPollFdList[MAX_FD_HANDLERS];
 
 /*----------------------------------------------------------------------------*/
-void EventLoop::register_read_callback(int fd, CallbackFunc pFunc, void * arg)
+bool EventLoop::register_read_callback(int fd, CallbackFunc pFunc, void * arg)
 {
-    register_callback(fd, pFunc, arg, NULL, NULL);
+    return register_callback(fd, pFunc, arg, NULL, NULL);
 }
 
 
 /*----------------------------------------------------------------------------*/
-void EventLoop::register_write_callback(int fd, CallbackFunc pFunc, void * arg)
+bool EventLoop::register_write_callback(int fd, CallbackFunc pFunc, void * arg)
 {
-    register_callback(fd, NULL, NULL, pFunc, arg);
+    return register_callback(fd, NULL, NULL, pFunc, arg);
 }
 
 
 /*----------------------------------------------------------------------------*/
-void EventLoop::register_callback(int fd, CallbackFunc pReadFunc, 
+bool EventLoop::register_callback(int fd, CallbackFunc pReadFunc, 
 	void * readArg, CallbackFunc pWriteFunc, void * writeArg)
 {
     unsigned i;
     if((pReadFunc == NULL) && (pWriteFunc == NULL)) {
 	// nothing to do
-        return;
+        return false;
     }
 
     // See if there is a match entry
@@ -54,7 +54,7 @@ void EventLoop::register_callback(int fd, CallbackFunc pReadFunc,
             ++mPollListSize;
         } else {
             LOG_ERROR("Too many handlers");
-            exit(1);
+	    return false;
         }
     }
     if(pReadFunc) {
@@ -68,6 +68,7 @@ void EventLoop::register_callback(int fd, CallbackFunc pReadFunc,
         mPollFdList[i].events |= POLLOUT;
     }
     mPollListChanged = true;
+    return true;
 }
 
 

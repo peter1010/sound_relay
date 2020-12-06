@@ -1,19 +1,14 @@
 #include <sys/socket.h>
 #include <string.h>
-#include <unistd.h>
 #include <arpa/inet.h>
 
 #include "tcp_connection.h"
 #include "logging.h"
-#include "tcp_server.h"
-
+#include "event_loop.h"
 
 /*----------------------------------------------------------------------------*/
-TcpConnection::TcpConnection(int sock, TcpServer & parent) : mSock(sock)
-	, mServer(parent), mRecvPos(0)
+TcpConnection::TcpConnection() :  mRecvPos(0)
 {
-   mMaxRecvLen = mServer.get_max_recv_len();
-   mpRecvBuf = new unsigned char[mMaxRecvLen];
 }
 
 
@@ -21,54 +16,43 @@ TcpConnection::TcpConnection(int sock, TcpServer & parent) : mSock(sock)
 TcpConnection::~TcpConnection()
 {
     LOG_DEBUG("~TcpConnection");
-
-    if(mSock >= 0) {
-	close(mSock);
-	mSock = -1;
-    }
-    if(mpRecvBuf) {
-	delete [] mpRecvBuf;
-	mpRecvBuf = NULL;
-    }
 }
 
 
 /*----------------------------------------------------------------------------*/
-void TcpConnection::recv(void * arg)
+bool TcpConnection::recv()
 {
-    reinterpret_cast<TcpConnection *>(arg)->recv();
-}
+    bool retVal = true;
+    unsigned maxLen = 0; 
+    Byte * pBuf = get_recv_buf(maxLen);
 
-
-/*----------------------------------------------------------------------------*/
-void TcpConnection::recv()
-{
-    int status = ::recv(mSock, &mpRecvBuf[mRecvPos], mMaxRecvLen-mRecvPos,
+    const int status = ::recv(get_sock(), &pBuf[mRecvPos], maxLen-mRecvPos,
 		    0);
     if(status <= 0) {
 	if(status < 0) {
 	    LOG_ERRNO_AS_ERROR("Recv failed");
 	} 
 	LOG_ERROR("Closing connection");
-	mServer.close_connection(*this);
+	retVal = false;
     } else {
         mRecvPos += status;
 
-	const int discard = parse_recv(mpRecvBuf, mRecvPos);
+	const int discard = parse_recv(pBuf, mRecvPos);
 	if(discard < 0) {
 	    LOG_ERROR("Closing connection");
-	    mServer.close_connection(*this);
+	    retVal = false;
 	} else if(discard > 0) {
 	    mRecvPos -= discard;
-	    memmove(mpRecvBuf, &mpRecvBuf[discard], mRecvPos);
+	    memmove(pBuf, &pBuf[discard], mRecvPos);
 	}
     }
+    return retVal;
 }
 
 
 /*----------------------------------------------------------------------------*/
 void TcpConnection::send(const unsigned char * pData, unsigned length)
 {
-    ::send(mSock, pData, length, 0);
+    ::send(get_sock(), pData, length, 0);
 }
 

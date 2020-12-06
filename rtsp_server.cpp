@@ -1,9 +1,8 @@
 #include <string.h>
 
-#include "rtsp_server.h"
 #include "logging.h"
-#include "tcp_connection.h"
 #include "rtsp_connection.h"
+#include "rtsp_server.h"
 
 /*----------------------------------------------------------------------------*/
 RtspServer::RtspServer(EventLoop & event_loop) : TcpServer(event_loop)
@@ -26,9 +25,9 @@ RtspServer::~RtspServer()
 
 
 /*----------------------------------------------------------------------------*/
-TcpConnection * RtspServer::connection_factory(int sock, TcpServer & parent)
+Connection * RtspServer::connection_factory()
 {
-    return new RtspConnection(sock, parent);
+    return new RtspConnection();
 }
 
 
