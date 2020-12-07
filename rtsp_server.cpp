@@ -5,7 +5,7 @@
 #include "rtsp_server.h"
 
 /*----------------------------------------------------------------------------*/
-RtspServer::RtspServer(EventLoop & event_loop) : TcpServer(event_loop)
+RtspServer::RtspServer()
 {
     LOG_DEBUG("RtspServer");
 

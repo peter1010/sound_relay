@@ -8,7 +8,7 @@ class Connection;
 class RtspServer : public TcpServer
 {
 public:
-    RtspServer(EventLoop & event_loop);
+    RtspServer();
 
     virtual ~RtspServer();
 

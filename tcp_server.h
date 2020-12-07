@@ -11,7 +11,7 @@ class EventLoop;
 class TcpServer : public Network
 {
 public:
-    TcpServer(EventLoop & rEventLoop);
+    TcpServer();
     virtual ~TcpServer() = 0;
 
 

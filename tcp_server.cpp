@@ -10,8 +10,7 @@
 
 
 /*----------------------------------------------------------------------------*/
-TcpServer::TcpServer(EventLoop & rEventLoop) 
-	: Network(rEventLoop), mSock(-1)
+TcpServer::TcpServer() : mSock(-1)
 {
     LOG_DEBUG("TcpServer");
 }
@@ -62,7 +61,7 @@ bool TcpServer::init(in_port_t port, in_addr_t address)
 	close(sock);
 	return false;
    }
-   get_event_loop().register_read_callback(sock, TcpServer::accept, this);
+   EventLoop::instance().register_read_callback(sock, TcpServer::accept, this);
    mSock = sock;
    return true;
 }
@@ -91,7 +90,7 @@ void TcpServer::accept()
 		buf, INET_ADDRSTRLEN));
 
     if(create_connection()) {
-	if(!get_connection()->attach(connfd, *this, client, get_event_loop())) {
+	if(!get_connection()->attach(connfd, *this, client)) {
             LOG_ERROR("Failed to attach connection");
 	    delete_connection();
         }

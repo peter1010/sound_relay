@@ -6,13 +6,22 @@
 #include "event_loop.h"
 #include "logging.h"
 
+EventLoop * EventLoop::mInstance = 0;
 
-bool EventLoop::mPollListChanged;
-unsigned EventLoop::mPollListSize = 0;
+/*----------------------------------------------------------------------------*/
+void EventLoop::create() 
+{
+    mInstance = new EventLoop();
+}
 
 
-EventLoop::CallbackEntry EventLoop::mPollCallbackList[MAX_FD_HANDLERS];
-struct pollfd EventLoop::mPollFdList[MAX_FD_HANDLERS];
+/*----------------------------------------------------------------------------*/
+EventLoop::EventLoop()
+{
+    LOG_DEBUG("EventLoop");
+    mPollListSize = 0;
+}
+
 
 /*----------------------------------------------------------------------------*/
 bool EventLoop::register_read_callback(int fd, CallbackFunc pFunc, void * arg)

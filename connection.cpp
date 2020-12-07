@@ -13,7 +13,7 @@ Connection::Connection() :  mpRecvBuf(NULL)
 
 /*----------------------------------------------------------------------------*/
 bool Connection::attach(int sock, Network & network, 
-		struct sockaddr_in & peerAddress, EventLoop & eventLoop)
+		struct sockaddr_in & peerAddress)
 {
     bool retVal = true;
 
@@ -25,7 +25,7 @@ bool Connection::attach(int sock, Network & network,
     if(mMaxRecvLen > 0) {
 	mpRecvBuf = new unsigned char[mMaxRecvLen];
 
-        retVal = eventLoop.register_read_callback(sock, Connection::recv, this);
+        retVal = EventLoop::instance().register_read_callback(sock, Connection::recv, this);
     }
     return retVal;
 }

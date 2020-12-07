@@ -12,12 +12,13 @@ class Connection;
 class UdpClient : public Network
 {
 public:
-    UdpClient(EventLoop & rEventLoop);
+    UdpClient();
     virtual ~UdpClient() = 0;
 
 
 protected:
-    bool init(in_port_t port, in_addr_t addr, in_port_t localPort = 0, in_addr_t localAddr = INADDR_ANY);
+    bool init(in_port_t port, in_addr_t addr, in_port_t localPort = 0,
+		    in_addr_t localAddr = INADDR_ANY);
 
 private:
     

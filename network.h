@@ -1,7 +1,6 @@
 #ifndef _NETWORK_H_
 #define _NETWORK_H_
 
-class EventLoop;
 class Connection;
 
 typedef Connection * (* ConnectionFactory)();
@@ -10,8 +9,7 @@ typedef Connection * (* ConnectionFactory)();
 class Network
 {
 public:
-    Network(EventLoop & rEventLoop);
-
+    Network();
     virtual ~Network() = 0;
 
     virtual unsigned get_max_recv_len() const = 0;
@@ -25,8 +23,6 @@ public:
 
 protected:
 
-    EventLoop & get_event_loop() const { return mEventLoop; };
-
     Connection * get_connection() const { return mpConn; };
     void delete_connection();
     bool create_connection();
@@ -34,7 +30,6 @@ protected:
 
 private:
     
-    EventLoop & mEventLoop;
     Connection * mpConn;
     ConnectionFactory mpConnectionFactory;
 

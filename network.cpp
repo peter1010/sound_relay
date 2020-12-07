@@ -5,8 +5,7 @@
 #include "connection.h"
 
 /*----------------------------------------------------------------------------*/
-Network::Network(EventLoop & rEventLoop) 
-	: mEventLoop(rEventLoop), mpConn(0), mpConnectionFactory(0) 
+Network::Network(): mpConn(0), mpConnectionFactory(0) 
 {
     LOG_DEBUG("Network");
 }
@@ -58,7 +57,7 @@ void Network::register_connection_factory(ConnectionFactory pFunc)
 void Network::detach_connection(int sock, Connection * pConn)
 {
     LOG_INFO("remove_connection");
-    mEventLoop.unregister(sock);
+    EventLoop::instance().unregister(sock);
     mpConn = 0;
 }
 

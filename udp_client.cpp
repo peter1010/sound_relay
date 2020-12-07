@@ -5,13 +5,11 @@
 
 #include "udp_client.h"
 #include "logging.h"
-#include "event_loop.h"
 #include "connection.h"
 
 
 /*----------------------------------------------------------------------------*/
-UdpClient::UdpClient(EventLoop & rEventLoop) 
-	: Network(rEventLoop)
+UdpClient::UdpClient() 
 {
     LOG_DEBUG("UdpClient");
 }
@@ -70,7 +68,7 @@ bool UdpClient::init(in_port_t port, in_addr_t address, in_port_t localPort,
     }
 
     if(create_connection()) {
-	if(!get_connection()->attach(sock, *this, addr, get_event_loop())) {
+	if(!get_connection()->attach(sock, *this, addr)) {
             LOG_ERROR("Failed to attach connection");
 	    delete_connection();
         }

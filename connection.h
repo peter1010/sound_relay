@@ -14,7 +14,7 @@ public:
     virtual ~Connection() = 0;
 
     // Called from the TcpServer after creating the connection object
-    bool attach(int, Network &, struct sockaddr_in &, EventLoop &);
+    bool attach(int, Network &, struct sockaddr_in &);
 
 protected:
     typedef unsigned char Byte;

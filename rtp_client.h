@@ -8,7 +8,7 @@ class Connection;
 class RtpClient : public UdpClient
 {
 public:
-    RtpClient(EventLoop & event_loop);
+    RtpClient();
     virtual ~RtpClient();
 
     unsigned get_max_recv_len() const {return 0;};

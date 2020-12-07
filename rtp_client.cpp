@@ -3,10 +3,9 @@
 #include "logging.h"
 #include "rtp_connection.h"
 #include "rtp_client.h"
-#include "event_loop.h"
 
 /*----------------------------------------------------------------------------*/
-RtpClient::RtpClient(EventLoop & event_loop) : UdpClient(event_loop)
+RtpClient::RtpClient()
 {
     LOG_DEBUG("RtpClient");
 
