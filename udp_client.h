@@ -15,6 +15,7 @@ public:
     UdpClient();
     virtual ~UdpClient() = 0;
 
+    const char * get_hostip() const { return "not implemented"; };
 
 protected:
     bool init(in_port_t port, in_addr_t addr, in_port_t localPort = 0,

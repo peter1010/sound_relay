@@ -14,7 +14,8 @@ public:
     TcpServer();
     virtual ~TcpServer() = 0;
 
-
+    const char * get_hostip() const { return mHostIp; };
+    
 protected:
     bool init(in_port_t port, in_addr_t addr = INADDR_ANY);
 
@@ -23,7 +24,8 @@ protected:
  
 private:
     int mSock;
-    
+    char mHostIp[INET_ADDRSTRLEN];
+
     TcpServer(const TcpServer &);
     TcpServer & operator=(const TcpServer &);
 };

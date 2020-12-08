@@ -206,9 +206,11 @@ void RtspConnection::parse_options_request(const std::string & str)
 /*----------------------------------------------------------------------------*/
 std::string RtspConnection::generate_options_response()
 {
-    return std::string("RTSP/1.0 200 OK\r\nCSeq: ") + mCseq + "\r\n"
+    return std::string("RTSP/1.0 200 OK\r\n" \
+	"CSeq: ") + mCseq + "\r\n" \
 	"Public: DESCRIBE, SETUP, PLAY, TEARDOWN\r\n\r\n";
 }
+
 
 /*----------------------------------------------------------------------------*/
 void RtspConnection::parse_describe_request(const std::string & str)
@@ -245,11 +247,18 @@ std::string RtspConnection::generate_describe_response()
     // t = (time the session is active)
     // m = (media name and transport address)
     std::string sdp = "v=0\r\n" \
-	    "o=- SESS-ID SESS-VER IN IP4 192.168.10.51\r\n" \
+	    "o=- " + std::to_string(get_session_id()) + " " 
+	    	+ std::to_string(get_session_ver()) + " IN IP4 " + get_hostip() 
+		+ "\r\n" \
 	    "s=TV Session\r\n" \
 	    "i=Sound from the TV\r\n" \
-	    "t=" + std::to_string(time(NULL)-3000) + " " + std::to_string(time(NULL)+3000) + "\r\n" \
-	    "m=audio " + std::to_string(mServerRtpPort) +" RTP/AVP 0\r\n";
+	    "t= 0 0\r\n" \
+	    "a=recvonly\r\n" \
+	    "a=control:rtsp://" + get_hostname() + ":" 
+	    	+ std::to_string(get_rtsp_server_port()) + "/" + get_pathname() 
+		+ "\r\n" \
+	    "m=audio " + std::to_string(get_our_rtp_port()) +" RTP/AVP 31\r\n" \
+	    "a=rtpmap:31 OPUS/48000/2\r\n";
 
     return std::string("RTSP/1.0 200 OK\r\n"\
 	    "CSeq: ") + mCseq + "\r\n" \

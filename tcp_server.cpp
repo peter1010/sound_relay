@@ -13,6 +13,7 @@
 TcpServer::TcpServer() : mSock(-1)
 {
     LOG_DEBUG("TcpServer");
+    strcpy(mHostIp,"Unknown");
 }
 
 
@@ -90,10 +91,16 @@ void TcpServer::accept()
 		buf, INET_ADDRSTRLEN));
 
     if(create_connection()) {
+    	struct sockaddr_in server;
 	if(!get_connection()->attach(connfd, *this, client)) {
             LOG_ERROR("Failed to attach connection");
 	    delete_connection();
         }
+    	socklen_t len = sizeof(client);
+    	if(0 == getsockname(connfd, reinterpret_cast<struct sockaddr *>(&server)
+		, &len)) {
+	   inet_ntop(AF_INET, &server.sin_addr, mHostIp, sizeof(mHostIp));
+	}
     } else {
 	::close(connfd);
     }	

@@ -1,3 +1,5 @@
+#include <unistd.h>
+#include <string.h>
 
 #include "network.h"
 #include "logging.h"
@@ -60,4 +62,27 @@ void Network::detach_connection(int sock, Connection * pConn)
     EventLoop::instance().unregister(sock);
     mpConn = 0;
 }
+
+
+/*----------------------------------------------------------------------------*/
+const char * Network::get_hostname() const
+{
+    static char buf[64];
+    static bool got_name = false;
+
+    if(!got_name) {
+	if(0 == gethostname(buf, sizeof(buf))) {
+	    const unsigned len = strlen(buf);
+	    buf[len] = '.';
+	    if(0 != getdomainname(&buf[len+1], sizeof(buf) - len - 1)) {
+		buf[len] = '\0';
+	    }
+	    got_name = true;	
+	} else {
+	    LOG_ERRNO_AS_ERROR("Failed to get domain name");
+	    buf[0] = '\0';
+        }
+    }
+    return buf;
+}    
 

@@ -21,12 +21,14 @@ public:
     // function.
     void register_connection_factory(ConnectionFactory pFunc);
 
+    const char * get_hostname() const;
+    virtual const char * get_hostip() const = 0;
+
 protected:
 
     Connection * get_connection() const { return mpConn; };
     void delete_connection();
     bool create_connection();
-
 
 private:
     

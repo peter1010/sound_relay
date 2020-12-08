@@ -2,8 +2,8 @@
 #define _CONNECTION_H_
 
 #include <netinet/in.h>		// Definition of sockaddr_in
+#include "network.h"
 
-class Network;
 class EventLoop;
 
 /*----------------------------------------------------------------------------*/
@@ -29,6 +29,9 @@ protected:
 
 
     virtual void send(const Byte *, unsigned) = 0;
+
+    const char * get_hostname() const { return mpNetwork->get_hostname(); };
+    const char * get_hostip() const { return mpNetwork->get_hostip(); };
 
 private:
     // Socket details

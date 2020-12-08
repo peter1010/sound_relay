@@ -38,6 +38,13 @@ protected:
     
     std::string generate_play_response();
 
+
+    int get_session_id() const { return 12; };
+    int get_session_ver() const { return  13; };
+    int get_rtsp_server_port() const { return 554; };
+    int get_our_rtp_port() const { return mServerRtpPort; };
+    const char * get_pathname() const { return "tv"; };
+
 private:
     enum T_STATE
     {
