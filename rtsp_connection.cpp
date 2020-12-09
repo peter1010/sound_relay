@@ -6,15 +6,76 @@
 
 #include "logging.h"
 #include "rtsp_connection.h"
+#include "tcp_server.h"
+#include "session.h"
+#include "media.h"
+
+/*----------------------------------------------------------------------------*/
+static std::string trim(const std::string str)
+{
+    const std::size_t begin = str.find_first_not_of(" \t");
+    const std::size_t end = str.find_last_not_of(" \t");
+    if(begin == std::string::npos) {
+	return "";
+    }
+    return str.substr(begin, end - begin +1);
+}
 
 
 /*----------------------------------------------------------------------------*/
-RtspConnection::RtspConnection() :  mState(PARSING_REQUEST_LINE)
+static char ascii2lower(char in) 
+{
+    if ((in <= 'Z') && (in >= 'A')) {
+	return in - 'Z' + 'z';
+    }
+    return in;
+}
+
+
+/*----------------------------------------------------------------------------*/
+static bool split_name_value_pair(const std::string & str, std::string & name,
+	       std::string & value)
+{
+    bool retVal = false;
+
+    const std::size_t colon = str.find(":");
+    if(colon != std::string::npos) {
+	name = std::string(str, 0, colon);
+	std::transform(name.begin(), name.end(), name.begin(), ascii2lower);
+	value = trim(str.substr(colon+1));
+	LOG_DEBUG("%s => %s", name.c_str(), value.c_str());
+	retVal = true;
+    }
+    return retVal;
+}
+
+
+/*----------------------------------------------------------------------------*/
+const std::string extract_path(const std::string url)
+{
+    if(url.rfind("rtsp://", 0) == 0) {
+	const std::size_t idx = url.find("/",7);
+	return url.substr(idx+1);
+    }
+    return "";
+}
+
+
+
+/*----------------------------------------------------------------------------*/
+RtspConnection::RtspConnection() :  mParsingState(PARSING_REQUEST_LINE)
 {
     mSession = "123456";
 
     mServerRtpPort = 49176;
     mServerRtcpPort = mServerRtpPort + 1;
+}
+
+
+/*----------------------------------------------------------------------------*/
+in_port_t RtspConnection::get_rtsp_server_port() const
+{
+    return dynamic_cast<TcpServer *>(get_network())->get_listening_port();
 }
 
 
@@ -74,7 +135,7 @@ void RtspConnection::parse_line(const std::string & str)
 {
     LOG_DEBUG("Line = %s", str.c_str());	
 
-    switch(mState) {
+    switch(mParsingState) {
 	case PARSING_REQUEST_LINE:
 	    parse_request_line(str);
 	    break;
@@ -99,7 +160,7 @@ std::string RtspConnection::get_response()
 {
     std::string retVal;
 
-    switch(mState) {
+    switch(mParsingState) {
 	case PARSING_REQUEST_LINE:
 	    break;
 	case PARSING_OPTIONS_REQUEST:
@@ -115,30 +176,12 @@ std::string RtspConnection::get_response()
 	    retVal = generate_play_response();
 	    break;
     }
-    mState = PARSING_REQUEST_LINE;
+    mParsingState = PARSING_REQUEST_LINE;
     LOG_DEBUG("%s", retVal.c_str());
     return retVal;
 }
 
 
-std::string trim(const std::string str)
-{
-    std::size_t begin = str.find_first_not_of(" \t");
-    std::size_t end = str.find_last_not_of(" \t");
-    if(begin == std::string::npos) {
-	return "";
-    }
-    return str.substr(begin, end - begin +1);
-}
-
-
-char ascii2lower(char in) 
-{
-    if ((in <= 'Z') && (in >= 'A')) {
-	return in - 'Z' + 'z';
-    }
-    return in;
-}
 
 /*----------------------------------------------------------------------------*/
 void RtspConnection::parse_request_line(const std::string & str)
@@ -149,21 +192,21 @@ void RtspConnection::parse_request_line(const std::string & str)
 
     if((idx1 != std::string::npos) && (idx2 != std::string::npos)) {
 	std::string request = str1.substr(0, idx1);
-	std::string url = trim(str1.substr(idx1, idx2-idx1));
+	mUrl = trim(str1.substr(idx1, idx2-idx1));
 	std::string version = str1.substr(idx2+1);
 
 //	LOG_DEBUG("Request = %s", request.c_str());
-//	LOG_DEBUG("URL = %s", url.c_str());
+//	LOG_DEBUG("URL = %s", mUrl.c_str());
 //	LOG_DEBUG("Version = %s", version.c_str());
 
 	if(request == "OPTIONS") {
-	    mState = PARSING_OPTIONS_REQUEST;
+	    mParsingState = PARSING_OPTIONS_REQUEST;
 	} else if(request == "DESCRIBE") {
-	    mState = PARSING_DESCRIBE_REQUEST;
+	    mParsingState = PARSING_DESCRIBE_REQUEST;
 	} else if(request == "SETUP") {
-	    mState = PARSING_SETUP_REQUEST;
+	    mParsingState = PARSING_SETUP_REQUEST;
 	} else if(request == "PLAY") {
-	    mState = PARSING_PLAY_REQUEST;
+	    mParsingState = PARSING_PLAY_REQUEST;
 	} else {
 	    LOG_ERROR("Unknown request %s", request.c_str());
 	    // TODO
@@ -171,21 +214,6 @@ void RtspConnection::parse_request_line(const std::string & str)
     }
 }
 
-
-bool split_name_value_pair(const std::string & str, std::string & name, std::string & value)
-{
-    bool retVal = false;
-
-    std::size_t colon = str.find(":");
-    if(colon != std::string::npos) {
-	name = std::string(str, 0, colon);
-	std::transform(name.begin(), name.end(), name.begin(), ascii2lower);
-	value = trim(str.substr(colon+1));
-	LOG_DEBUG("%s => %s", name.c_str(), value.c_str());
-	retVal = true;
-    }
-    return retVal;
-}
 
 
 /*----------------------------------------------------------------------------*/
@@ -231,10 +259,12 @@ void RtspConnection::parse_describe_request(const std::string & str)
     }	
 }
 
-
 /*----------------------------------------------------------------------------*/
 std::string RtspConnection::generate_describe_response()
 {
+    std::string pathname = extract_path(mUrl);
+
+    Session * pSession = Media::get_session(pathname.c_str());
     // Mandatory fields:
     // CSeq:
     // Content-type:
@@ -314,11 +344,12 @@ void RtspConnection::parse_setup_request(const std::string & str)
 		if(subName == "client_port") {
 		    const std::size_t idx4 = subValue.find("-");
 		    if(idx4 != std::string::npos) {
-			mClientRtpPort = std::stoi(subValue.substr(0, idx4));
-			mClientRtcpPort = std::stoi(subValue.substr(idx4+1));
+			set_peer_rtp_port(std::stoi(subValue.substr(0, idx4)));
+			set_peer_rtcp_port(std::stoi(subValue.substr(idx4+1)));
 		    } else {
-			mClientRtpPort = std::stoi(subValue);
-			mClientRtcpPort = mClientRtpPort + 1;
+			in_port_t port = std::stoi(subValue);
+			set_peer_rtp_port(port);
+			set_peer_rtcp_port(port+1);
 		    }
 		}
             }
@@ -335,10 +366,10 @@ std::string RtspConnection::generate_setup_response()
     // Session:
     // Transport:
     std::string transport = "RTP/AVP/UDP;unicast;" \
-	"client_port=" + std::to_string(mClientRtpPort) + "-"
-       	+ std::to_string(mClientRtcpPort) + ";"\
-	"server_port=" + std::to_string(mServerRtpPort) + "-"
-	+ std::to_string(mServerRtcpPort);
+	"client_port=" + std::to_string(get_peer_rtp_port()) + "-"
+       	+ std::to_string(get_peer_rtcp_port()) + ";"\
+	"server_port=" + std::to_string(get_our_rtp_port()) + "-"
+	+ std::to_string(get_our_rtcp_port());
 
     return std::string("RTSP/1.0 200 OK\r\n" \
         "CSeq: ") + mCseq + "\r\n" \

@@ -32,6 +32,7 @@ protected:
 
     const char * get_hostname() const { return mpNetwork->get_hostname(); };
     const char * get_hostip() const { return mpNetwork->get_hostip(); };
+    Network * get_network() const { return mpNetwork; };
 
 private:
     // Socket details

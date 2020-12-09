@@ -4,7 +4,6 @@
 #include <string>
 #include "tcp_connection.h"
 
-
 class RtspConnection : public TcpConnection
 {
 public:
@@ -41,11 +40,17 @@ protected:
 
     int get_session_id() const { return 12; };
     int get_session_ver() const { return  13; };
-    int get_rtsp_server_port() const { return 554; };
     int get_our_rtp_port() const { return mServerRtpPort; };
+    int get_our_rtcp_port() const { return mServerRtcpPort; };
+    int get_peer_rtp_port() const { return mClientRtpPort; };
+    int get_peer_rtcp_port() const { return mClientRtcpPort; };
+    void set_peer_rtp_port(in_port_t port) { mClientRtpPort = port; };
+    void set_peer_rtcp_port(in_port_t port) { mClientRtcpPort = port; };
     const char * get_pathname() const { return "tv"; };
+    in_port_t get_rtsp_server_port() const;
 
 private:
+
     enum T_STATE
     {
 	PARSING_REQUEST_LINE,
@@ -54,10 +59,11 @@ private:
 	PARSING_SETUP_REQUEST,
 	PARSING_PLAY_REQUEST,
     };
-    T_STATE mState;
-
+    T_STATE mParsingState;
+    std::string mUrl;
     std::string mCseq;
-       	
+
+
     std::string mSession;
 
     unsigned short mClientRtpPort;

@@ -64,6 +64,7 @@ bool TcpServer::init(in_port_t port, in_addr_t address)
    }
    EventLoop::instance().register_read_callback(sock, TcpServer::accept, this);
    mSock = sock;
+   mListeningPort = port;
    return true;
 }
 
