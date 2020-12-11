@@ -65,10 +65,6 @@ const std::string extract_path(const std::string url)
 /*----------------------------------------------------------------------------*/
 RtspConnection::RtspConnection() :  mParsingState(PARSING_REQUEST_LINE)
 {
-    mSession = "123456";
-
-    mServerRtpPort = 49176;
-    mServerRtcpPort = mServerRtpPort + 1;
 }
 
 
@@ -259,11 +255,11 @@ void RtspConnection::parse_describe_request(const std::string & str)
     }	
 }
 
+
 /*----------------------------------------------------------------------------*/
 std::string RtspConnection::generate_describe_response()
 {
     std::string pathname = extract_path(mUrl);
-
     Session * pSession = Media::get_session(pathname.c_str());
     // Mandatory fields:
     // CSeq:
@@ -277,17 +273,18 @@ std::string RtspConnection::generate_describe_response()
     // t = (time the session is active)
     // m = (media name and transport address)
     std::string sdp = "v=0\r\n" \
-	    "o=- " + std::to_string(get_session_id()) + " " 
-	    	+ std::to_string(get_session_ver()) + " IN IP4 " + get_hostip() 
-		+ "\r\n" \
+	    "o=- " + std::to_string(pSession->get_sdp_id()) + " " 
+	    	+ std::to_string(pSession->get_sdp_ver()) + " IN IP4 "
+	       	+ get_hostip() + "\r\n" \
 	    "s=TV Session\r\n" \
 	    "i=Sound from the TV\r\n" \
 	    "t= 0 0\r\n" \
 	    "a=recvonly\r\n" \
 	    "a=control:rtsp://" + get_hostname() + ":" 
-	    	+ std::to_string(get_rtsp_server_port()) + "/" + get_pathname() 
-		+ "\r\n" \
-	    "m=audio " + std::to_string(get_our_rtp_port()) +" RTP/AVP 31\r\n" \
+	    	+ std::to_string(get_rtsp_server_port()) + "/"
+	       	+ pSession->get_pathname() + "\r\n" \
+	    "m=audio " + std::to_string(pSession->get_our_rtp_port()) 
+	    	+ " RTP/AVP 31\r\n" \
 	    "a=rtpmap:31 OPUS/48000/2\r\n";
 
     return std::string("RTSP/1.0 200 OK\r\n"\
@@ -301,6 +298,9 @@ std::string RtspConnection::generate_describe_response()
 /*----------------------------------------------------------------------------*/
 void RtspConnection::parse_setup_request(const std::string & str)
 {
+    std::string pathname = extract_path(mUrl);
+    Session * pSession = Media::get_session(pathname.c_str());
+
     std::string name;
     std::string value;
 
@@ -344,12 +344,12 @@ void RtspConnection::parse_setup_request(const std::string & str)
 		if(subName == "client_port") {
 		    const std::size_t idx4 = subValue.find("-");
 		    if(idx4 != std::string::npos) {
-			set_peer_rtp_port(std::stoi(subValue.substr(0, idx4)));
-			set_peer_rtcp_port(std::stoi(subValue.substr(idx4+1)));
+			pSession->set_peer_rtp_port(std::stoi(subValue.substr(0, idx4)));
+			pSession->set_peer_rtcp_port(std::stoi(subValue.substr(idx4+1)));
 		    } else {
 			in_port_t port = std::stoi(subValue);
-			set_peer_rtp_port(port);
-			set_peer_rtcp_port(port+1);
+			pSession->set_peer_rtp_port(port);
+			pSession->set_peer_rtcp_port(port+1);
 		    }
 		}
             }
@@ -361,19 +361,21 @@ void RtspConnection::parse_setup_request(const std::string & str)
 /*----------------------------------------------------------------------------*/
 std::string RtspConnection::generate_setup_response()
 {
+    std::string pathname = extract_path(mUrl);
+    Session * pSession = Media::get_session(pathname.c_str());
     // Mandatory fields:
     // CSeq:
     // Session:
     // Transport:
     std::string transport = "RTP/AVP/UDP;unicast;" \
-	"client_port=" + std::to_string(get_peer_rtp_port()) + "-"
-       	+ std::to_string(get_peer_rtcp_port()) + ";"\
-	"server_port=" + std::to_string(get_our_rtp_port()) + "-"
-	+ std::to_string(get_our_rtcp_port());
+	"client_port=" + std::to_string(pSession->get_peer_rtp_port()) + "-"
+       	+ std::to_string(pSession->get_peer_rtcp_port()) + ";"\
+	"server_port=" + std::to_string(pSession->get_our_rtp_port()) + "-"
+	+ std::to_string(pSession->get_our_rtcp_port());
 
     return std::string("RTSP/1.0 200 OK\r\n" \
         "CSeq: ") + mCseq + "\r\n" \
-	"Session: " + mSession + "\r\n" \
+	"Session: " + pSession->get_id() + "\r\n" \
 	"Transport: " + transport + "\r\n\r\n";
 }
 
@@ -381,6 +383,9 @@ std::string RtspConnection::generate_setup_response()
 /*----------------------------------------------------------------------------*/
 void RtspConnection::parse_play_request(const std::string & str)
 {
+//    std::string pathname = extract_path(mUrl);
+//    Session * pSession = Media::get_session(pathname.c_str());
+
     std::string name;
     std::string value;
 

@@ -1,6 +1,7 @@
 #ifndef _SESSION_H_
 #define _SESSION_H_
 
+#include <netinet/ip.h>
 
 class Session
 {
@@ -8,8 +9,9 @@ public:
     Session();
     ~Session();
 
-    int get_session_id() const { return 12; };
-    int get_session_ver() const { return  13; };
+    int get_sdp_id() const { return 12; };
+    int get_sdp_ver() const { return  13; };
+    const char * get_id() const { return "12345"; };
 
     unsigned get_our_rtp_port() const { return mOurRtpPort; };
     unsigned get_our_rtcp_port() const { return mOurRtcpPort; };
