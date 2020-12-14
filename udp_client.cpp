@@ -24,8 +24,9 @@ UdpClient::~UdpClient()
 
 
 /*----------------------------------------------------------------------------*/
-bool UdpClient::init(in_port_t port, in_addr_t address, in_port_t localPort,
-	       in_addr_t localAddress) 
+bool UdpClient::init(unsigned short port, const IpAddress & address, 
+		unsigned short localPort,
+	      	const IpAddress & localAddress) 
 {
     struct sockaddr_in addr;
     int status;
@@ -68,7 +69,8 @@ bool UdpClient::init(in_port_t port, in_addr_t address, in_port_t localPort,
     }
 
     if(create_connection()) {
-	if(!get_connection()->attach(sock, *this, addr)) {
+	if(!get_connection()->attach(sock, *this, ntohl(addr.sin_addr.s_addr),
+		ntohs(addr.sin_port))) {
             LOG_ERROR("Failed to attach connection");
 	    delete_connection();
         }

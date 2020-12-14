@@ -1,8 +1,8 @@
 #ifndef _TCP_SERVER_H_
 #define _TCP_SERVER_H_
 
-#include <netinet/ip.h>
 #include "network.h"
+#include "ip_address.h"
 
 class EventLoop;
 
@@ -14,19 +14,19 @@ public:
     TcpServer();
     virtual ~TcpServer() = 0;
 
-    const char * get_hostip() const { return mHostIp; };
-    in_port_t get_listening_port() const { return mListeningPort; };
+    const IpAddress & get_hostip() const { return mHostIp; };
+    unsigned short get_listening_port() const { return mListeningPort; };
 
 protected:
-    bool init(in_port_t port, in_addr_t addr = INADDR_ANY);
+    bool init(unsigned short port, IpAddress addr = AnyAddress);
 
     static void accept(void * arg);
     void accept();
  
 private:
     int mSock;
-    char mHostIp[INET_ADDRSTRLEN];
-    in_port_t mListeningPort;
+    IpAddress mHostIp;
+    unsigned short mListeningPort;
  
     TcpServer(const TcpServer &);
     TcpServer & operator=(const TcpServer &);

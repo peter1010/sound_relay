@@ -4,11 +4,12 @@
 #include "udp_client.h"
 
 class Connection;
+class Session;
 
 class RtpClient : public UdpClient
 {
 public:
-    RtpClient();
+    RtpClient(const Session & session);
     virtual ~RtpClient();
 
     unsigned get_max_recv_len() const {return 0;};

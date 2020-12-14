@@ -2,6 +2,7 @@
 #define _NETWORK_H_
 
 class Connection;
+class IpAddress;
 
 typedef Connection * (* ConnectionFactory)();
 
@@ -22,7 +23,7 @@ public:
     void register_connection_factory(ConnectionFactory pFunc);
 
     const char * get_hostname() const;
-    virtual const char * get_hostip() const = 0;
+    virtual const IpAddress & get_hostip() const = 0;
 
 protected:
 

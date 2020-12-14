@@ -13,19 +13,21 @@ Connection::Connection() :  mpRecvBuf(NULL)
 
 /*----------------------------------------------------------------------------*/
 bool Connection::attach(int sock, Network & network, 
-		struct sockaddr_in & peerAddress)
+		const IpAddress & peerAddress, unsigned short peerPort)
 {
     bool retVal = true;
 
     mpNetwork = &network;
     mSock = sock;
     mPeerAddress = peerAddress;
+//  mPeerPort = port;
 
     mMaxRecvLen = network.get_max_recv_len();
     if(mMaxRecvLen > 0) {
 	mpRecvBuf = new unsigned char[mMaxRecvLen];
 
-        retVal = EventLoop::instance().register_read_callback(sock, Connection::recv, this);
+        retVal = EventLoop::instance().register_read_callback(sock, 
+			Connection::recv, this);
     }
     return retVal;
 }

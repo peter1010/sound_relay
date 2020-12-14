@@ -1,8 +1,8 @@
 #ifndef _CONNECTION_H_
 #define _CONNECTION_H_
 
-#include <netinet/in.h>		// Definition of sockaddr_in
 #include "network.h"
+#include "ip_address.h"
 
 class EventLoop;
 
@@ -14,7 +14,7 @@ public:
     virtual ~Connection() = 0;
 
     // Called from the TcpServer after creating the connection object
-    bool attach(int, Network &, struct sockaddr_in &);
+    bool attach(int, Network &, const IpAddress &, unsigned short);
 
 protected:
     typedef unsigned char Byte;
@@ -31,14 +31,18 @@ protected:
     virtual void send(const Byte *, unsigned) = 0;
 
     const char * get_hostname() const { return mpNetwork->get_hostname(); };
-    const char * get_hostip() const { return mpNetwork->get_hostip(); };
+
+    const IpAddress & get_hostip() const { return mpNetwork->get_hostip(); };
+
+    const IpAddress & get_peer_address() const { return mPeerAddress; };
+
     Network * get_network() const { return mpNetwork; };
 
 private:
     // Socket details
     int mSock;
     Network * mpNetwork;
-    struct sockaddr_in  mPeerAddress;
+    IpAddress mPeerAddress;
 
     Byte * mpRecvBuf;
     unsigned mMaxRecvLen;

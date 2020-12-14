@@ -13,7 +13,6 @@
 TcpServer::TcpServer() : mSock(-1)
 {
     LOG_DEBUG("TcpServer");
-    strcpy(mHostIp,"Unknown");
 }
 
 
@@ -29,7 +28,7 @@ TcpServer::~TcpServer()
 
 
 /*----------------------------------------------------------------------------*/
-bool TcpServer::init(in_port_t port, in_addr_t address) 
+bool TcpServer::init(unsigned short port, IpAddress address) 
 {
     struct sockaddr_in addr;
 
@@ -46,7 +45,7 @@ bool TcpServer::init(in_port_t port, in_addr_t address)
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(address);
+    addr.sin_addr.s_addr = htonl(address); // htonl(address);
 
     int status = bind(sock, reinterpret_cast<struct sockaddr *>(&addr), 
 	    sizeof(addr));
@@ -93,14 +92,15 @@ void TcpServer::accept()
 
     if(create_connection()) {
     	struct sockaddr_in server;
-	if(!get_connection()->attach(connfd, *this, client)) {
+	if(!get_connection()->attach(connfd, *this,
+			client.sin_addr, ntohs(client.sin_port))) {
             LOG_ERROR("Failed to attach connection");
 	    delete_connection();
         }
     	socklen_t len = sizeof(client);
     	if(0 == getsockname(connfd, reinterpret_cast<struct sockaddr *>(&server)
 		, &len)) {
-	   inet_ntop(AF_INET, &server.sin_addr, mHostIp, sizeof(mHostIp));
+	   mHostIp = server.sin_addr;
 	}
     } else {
 	::close(connfd);

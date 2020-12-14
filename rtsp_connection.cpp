@@ -69,7 +69,7 @@ RtspConnection::RtspConnection() :  mParsingState(PARSING_REQUEST_LINE)
 
 
 /*----------------------------------------------------------------------------*/
-in_port_t RtspConnection::get_rtsp_server_port() const
+unsigned short RtspConnection::get_rtsp_server_port() const
 {
     return dynamic_cast<TcpServer *>(get_network())->get_listening_port();
 }
@@ -129,7 +129,7 @@ void RtspConnection::generate_response()
 /*----------------------------------------------------------------------------*/
 void RtspConnection::parse_line(const std::string & str)
 {
-    LOG_DEBUG("Line = %s", str.c_str());	
+//    LOG_DEBUG("Line = %s", str.c_str());	
 
     switch(mParsingState) {
 	case PARSING_REQUEST_LINE:
@@ -146,6 +146,9 @@ void RtspConnection::parse_line(const std::string & str)
 	    break;
 	case PARSING_PLAY_REQUEST:
 	    parse_play_request(str);
+	    break;
+	case PARSING_UNKNOWN_REQUEST:
+	    parse_unknown_request(str);
 	    break;
     }
 }
@@ -171,6 +174,10 @@ std::string RtspConnection::get_response()
 	case PARSING_PLAY_REQUEST:
 	    retVal = generate_play_response();
 	    break;
+	case PARSING_UNKNOWN_REQUEST:
+	    retVal = generate_405_response();
+	    break;
+	
     }
     mParsingState = PARSING_REQUEST_LINE;
     LOG_DEBUG("%s", retVal.c_str());
@@ -205,7 +212,7 @@ void RtspConnection::parse_request_line(const std::string & str)
 	    mParsingState = PARSING_PLAY_REQUEST;
 	} else {
 	    LOG_ERROR("Unknown request %s", request.c_str());
-	    // TODO
+	    mParsingState = PARSING_UNKNOWN_REQUEST;
 	}
     }
 }
@@ -228,7 +235,7 @@ void RtspConnection::parse_options_request(const std::string & str)
 
 
 /*----------------------------------------------------------------------------*/
-std::string RtspConnection::generate_options_response()
+const std::string RtspConnection::generate_options_response() const
 {
     return std::string("RTSP/1.0 200 OK\r\n" \
 	"CSeq: ") + mCseq + "\r\n" \
@@ -275,7 +282,7 @@ std::string RtspConnection::generate_describe_response()
     std::string sdp = "v=0\r\n" \
 	    "o=- " + std::to_string(pSession->get_sdp_id()) + " " 
 	    	+ std::to_string(pSession->get_sdp_ver()) + " IN IP4 "
-	       	+ get_hostip() + "\r\n" \
+	       	+ get_hostip().c_str() + "\r\n" \
 	    "s=TV Session\r\n" \
 	    "i=Sound from the TV\r\n" \
 	    "t= 0 0\r\n" \
@@ -347,7 +354,7 @@ void RtspConnection::parse_setup_request(const std::string & str)
 			pSession->set_peer_rtp_port(std::stoi(subValue.substr(0, idx4)));
 			pSession->set_peer_rtcp_port(std::stoi(subValue.substr(idx4+1)));
 		    } else {
-			in_port_t port = std::stoi(subValue);
+			unsigned short port = std::stoi(subValue);
 			pSession->set_peer_rtp_port(port);
 			pSession->set_peer_rtcp_port(port+1);
 		    }
@@ -363,6 +370,10 @@ std::string RtspConnection::generate_setup_response()
 {
     std::string pathname = extract_path(mUrl);
     Session * pSession = Media::get_session(pathname.c_str());
+
+    pSession->set_our_address(get_hostip());
+    pSession->add_peer_address(get_peer_address());
+
     // Mandatory fields:
     // CSeq:
     // Session:
@@ -383,9 +394,6 @@ std::string RtspConnection::generate_setup_response()
 /*----------------------------------------------------------------------------*/
 void RtspConnection::parse_play_request(const std::string & str)
 {
-//    std::string pathname = extract_path(mUrl);
-//    Session * pSession = Media::get_session(pathname.c_str());
-
     std::string name;
     std::string value;
 
@@ -402,6 +410,11 @@ void RtspConnection::parse_play_request(const std::string & str)
 /*----------------------------------------------------------------------------*/
 std::string RtspConnection::generate_play_response()
 {
+    std::string pathname = extract_path(mUrl);
+    Session * pSession = Media::get_session(pathname.c_str());
+
+    pSession->play();
+
     // Mandatory fields:
     // CSeq:
     
@@ -410,4 +423,25 @@ std::string RtspConnection::generate_play_response()
 }
 
 
+/*----------------------------------------------------------------------------*/
+void RtspConnection::parse_unknown_request(const std::string & str)
+{
+    std::string name;
+    std::string value;
 
+    if(split_name_value_pair(str, name, value)) {
+	// CSeq
+	if(name == "cseq") {
+	    mCseq = value;
+	}
+    }	
+}
+
+
+/*----------------------------------------------------------------------------*/
+const std::string RtspConnection::generate_405_response() const
+{
+    return std::string("RTSP/1.0 405 Method Not Allowed\r\n" \
+	"CSeq: ") + mCseq + "\r\n" \
+	"Allow: DESCRIBE, SETUP, PLAY, TEARDOWN\r\n\r\n";
+}

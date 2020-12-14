@@ -10,7 +10,7 @@ Session * Media::get_session(const char * pathname)
     if(!Media::mInstance) {
 	Media::mInstance = new Media();
     }
-    return Media::mInstance->get_session(pathname);
+    return Media::mInstance->find_session(pathname);
 }
 
 
