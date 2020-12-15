@@ -10,7 +10,7 @@
 
 
 /*----------------------------------------------------------------------------*/
-TcpServer::TcpServer() : mSock(-1)
+TcpServer::TcpServer() : Network(1), mSock(-1)
 {
     LOG_DEBUG("TcpServer");
 }
@@ -71,17 +71,11 @@ bool TcpServer::init(unsigned short port, IpAddress address)
 /*----------------------------------------------------------------------------*/
 void TcpServer::accept(void * arg)
 {
-    reinterpret_cast<TcpServer *>(arg)->accept();
-}
-
-
-/*----------------------------------------------------------------------------*/
-void TcpServer::accept()
-{
+    TcpServer * pThis = reinterpret_cast<TcpServer *>(arg);
     struct sockaddr_in client;
     socklen_t len = sizeof(client);
 
-    int connfd = ::accept(mSock, reinterpret_cast<struct sockaddr *>(&client),
+    int connfd = ::accept(pThis->mSock, reinterpret_cast<struct sockaddr *>(&client),
 		&len);
     if(connfd < 0) {
 	LOG_ERRNO_AS_ERROR("Accept failed");
@@ -90,17 +84,18 @@ void TcpServer::accept()
     LOG_INFO("Incomming request from %s", inet_ntop(AF_INET, &client.sin_addr,
 		buf, INET_ADDRSTRLEN));
 
-    if(create_connection()) {
+    Connection * pConn = pThis->create_connection();
+    if(pConn) {
     	struct sockaddr_in server;
-	if(!get_connection()->attach(connfd, *this,
+	if(!pConn->attach(connfd, *pThis,
 			client.sin_addr, ntohs(client.sin_port))) {
             LOG_ERROR("Failed to attach connection");
-	    delete_connection();
+	    delete pConn;
         }
     	socklen_t len = sizeof(client);
     	if(0 == getsockname(connfd, reinterpret_cast<struct sockaddr *>(&server)
 		, &len)) {
-	   mHostIp = server.sin_addr;
+	   pThis->mHostIp = server.sin_addr;
 	}
     } else {
 	::close(connfd);

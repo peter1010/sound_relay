@@ -4,6 +4,8 @@
 #include "rtp_connection.h"
 #include "rtp_client.h"
 #include "session.h"
+#include "capture.h"
+
 
 /*----------------------------------------------------------------------------*/
 RtpClient::RtpClient(const Session & session)
@@ -13,10 +15,10 @@ RtpClient::RtpClient(const Session & session)
     init(session.get_peer_rtp_port(), session.get_peer_address(),
 		    session.get_our_rtp_port(), session.get_our_address());
 
-//    mSource = session.get_source();
+    mpSource = session.get_source();
 //    mSink = session.get_sink();
 
-    register_connection_factory(RtpClient::connection_factory);
+    register_connection_factory(RtpClient::connection_factory, this);
 }
 
 
@@ -28,10 +30,11 @@ RtpClient::~RtpClient()
 
 
 /*----------------------------------------------------------------------------*/
-Connection * RtpClient::connection_factory()
+Connection * RtpClient::connection_factory(void * pArg)
 {
+    RtpClient * pThis = reinterpret_cast<RtpClient *>(pArg);
     RtpConnection * conn = new RtpConnection();
-//    mSource->attach(conn);
+    pThis->mpSource->attach(conn);
     return conn;
 }
 

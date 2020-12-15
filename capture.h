@@ -1,4 +1,10 @@
+#ifndef _CAPTURE_H_
+#define _CAPTURE_H_
+
 #include <alsa/asoundlib.h>
+
+class Connection;
+
 
 class Capture
 {
@@ -24,4 +30,8 @@ private:
 public:
     Capture();
     void init();
+    void attach(Connection *);
 };
+
+#endif
+

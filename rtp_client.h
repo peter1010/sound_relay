@@ -5,20 +5,24 @@
 
 class Connection;
 class Session;
+class Capture;
+
 
 class RtpClient : public UdpClient
 {
 public:
-    RtpClient(const Session & session);
+    RtpClient(const Session &);
     virtual ~RtpClient();
 
     unsigned get_max_recv_len() const {return 0;};
 
 protected:
 
-    static Connection * connection_factory();
+    static Connection * connection_factory(void *);
 
 private:
+
+    Capture * mpSource;
 };
 
 #endif

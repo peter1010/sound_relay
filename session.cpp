@@ -1,5 +1,6 @@
 #include "session.h"
 #include "rtp_client.h"
+#include "capture.h"
 
 /*----------------------------------------------------------------------------*/
 Session::Session()
@@ -16,5 +17,7 @@ Session::Session()
 /*----------------------------------------------------------------------------*/
 void Session::play()
 {
-//    pRtp = new RtpClient();
+    mpSource = new Capture();
+    mpSource->init();    
+    mpRtp = new RtpClient(*this);
 }

@@ -13,7 +13,7 @@ RtspServer::RtspServer()
     if(!init(554)) {
 	init(8554);
     }
-    register_connection_factory(RtspServer::connection_factory);
+    register_connection_factory(RtspServer::connection_factory, this);
 }
 
 
@@ -25,7 +25,7 @@ RtspServer::~RtspServer()
 
 
 /*----------------------------------------------------------------------------*/
-Connection * RtspServer::connection_factory()
+Connection * RtspServer::connection_factory(void *)
 {
     return new RtspConnection();
 }

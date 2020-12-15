@@ -7,9 +7,14 @@
 #include "connection.h"
 
 /*----------------------------------------------------------------------------*/
-Network::Network(): mpConn(0), mpConnectionFactory(0) 
+Network::Network(unsigned maxNumOfConns): mMaxNumOfConns(maxNumOfConns),
+	mpConnectionFactory(0), mpFactoryArg(0)
 {
     LOG_DEBUG("Network");
+    mpConns = new Connection * [maxNumOfConns];
+    for(unsigned i = 0; i < maxNumOfConns; i++) {
+	mpConns[i] = 0;
+    }
 }
 
 
@@ -17,41 +22,52 @@ Network::Network(): mpConn(0), mpConnectionFactory(0)
 Network::~Network()
 {
     LOG_DEBUG("~Network");
-    delete_connection();
+    delete_connections();
 }
 
 
 /*----------------------------------------------------------------------------*/
-void Network::delete_connection()
+void Network::delete_connections()
 {
-    if(mpConn) {
-        delete mpConn;
-	mpConn = 0;
+    for(unsigned i = 0; i < mMaxNumOfConns; i++) {
+	Connection * pConn = mpConns[i];
+	if(pConn) {
+            delete pConn;
+	    mpConns[i] = 0;
+	}
     }
 }
 
 
 /*----------------------------------------------------------------------------*/
-bool Network::create_connection() 
+Connection * Network::create_connection() 
 {
+    Connection * pConn = 0;
+
     if(!mpConnectionFactory) {	
         LOG_ERROR("No registered Connection factory");
-	return false;
+	return 0;
     }
-    if(mpConn) {
+    for(unsigned i = 0; i < mMaxNumOfConns; i++) {
+	if(mpConns[i] == 0) {
+    	    pConn = mpConnectionFactory(mpFactoryArg);
+    	    mpConns[i] = pConn;
+	    break;
+	}
+    }
+    if(!pConn) {
         LOG_ERROR("Too many active connections");
-	return false;
     }
 
-    mpConn = mpConnectionFactory();
-    return true;
+    return pConn;
 }
 
 
 /*----------------------------------------------------------------------------*/
-void Network::register_connection_factory(ConnectionFactory pFunc)
+void Network::register_connection_factory(ConnectionFactory pFunc, void * pArg)
 {
-    mpConnectionFactory = pFunc;;
+    mpConnectionFactory = pFunc;
+    mpFactoryArg = pArg;
 }
 
 
@@ -60,7 +76,12 @@ void Network::detach_connection(int sock, Connection * pConn)
 {
     LOG_INFO("remove_connection");
     EventLoop::instance().unregister(sock);
-    mpConn = 0;
+
+    for(unsigned i = 0; i < mMaxNumOfConns; i++) {
+	if(mpConns[i] == pConn) {
+    	    mpConns[i] = 0;
+	}
+    }
 }
 
 

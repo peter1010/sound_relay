@@ -9,7 +9,7 @@
 
 
 /*----------------------------------------------------------------------------*/
-UdpClient::UdpClient() 
+UdpClient::UdpClient() : Network(1)
 {
     LOG_DEBUG("UdpClient");
 }
@@ -68,11 +68,12 @@ bool UdpClient::init(unsigned short port, const IpAddress & address,
         return false;
     }
 
-    if(create_connection()) {
-	if(!get_connection()->attach(sock, *this, ntohl(addr.sin_addr.s_addr),
+    Connection * pConn = create_connection();
+    if(pConn) {
+	if(!pConn->attach(sock, *this, ntohl(addr.sin_addr.s_addr),
 		ntohs(addr.sin_port))) {
             LOG_ERROR("Failed to attach connection");
-	    delete_connection();
+	    delete pConn;
         }
     } else {
 	close(sock);

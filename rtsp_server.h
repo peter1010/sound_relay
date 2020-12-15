@@ -16,7 +16,7 @@ public:
 
 protected:
 
-    static Connection * connection_factory();
+    static Connection * connection_factory(void *);
 
 private:
 };

@@ -3,6 +3,9 @@
 
 #include "ip_address.h"
 
+class Capture;
+class RtpClient;
+
 class Session
 {
 public:
@@ -30,6 +33,8 @@ public:
 
     const char * get_pathname() const { return "tv"; };
 
+    Capture * get_source() const { return mpSource; };
+
     void play();
 
 private:
@@ -41,6 +46,9 @@ private:
     IpAddress mPeerAddress;
     unsigned short mPeerRtpPort;
     unsigned short mPeerRtcpPort;
+
+    Capture * mpSource;
+    RtpClient * mpRtp;	
 };
 
 #endif

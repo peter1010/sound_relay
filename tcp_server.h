@@ -21,7 +21,6 @@ protected:
     bool init(unsigned short port, IpAddress addr = AnyAddress);
 
     static void accept(void * arg);
-    void accept();
  
 private:
     int mSock;
