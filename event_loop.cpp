@@ -8,6 +8,7 @@
 
 EventLoop * EventLoop::mInstance = 0;
 
+
 /*----------------------------------------------------------------------------*/
 void EventLoop::create() 
 {
@@ -26,23 +27,30 @@ EventLoop::EventLoop()
 /*----------------------------------------------------------------------------*/
 bool EventLoop::register_read_callback(int fd, CallbackFunc pFunc, void * arg)
 {
-    return register_callback(fd, pFunc, arg, NULL, NULL);
+    return register_callback(fd, pFunc, arg, NULL, NULL, NULL, NULL);
 }
 
 
 /*----------------------------------------------------------------------------*/
 bool EventLoop::register_write_callback(int fd, CallbackFunc pFunc, void * arg)
 {
-    return register_callback(fd, NULL, NULL, pFunc, arg);
+    return register_callback(fd, NULL, NULL, pFunc, arg, NULL, NULL);
 }
 
 
 /*----------------------------------------------------------------------------*/
+bool EventLoop::register_error_callback(int fd, CallbackFunc pFunc, void * arg)
+{
+    return register_callback(fd, NULL, NULL, NULL, NULL, pFunc, arg);
+}
+
+/*----------------------------------------------------------------------------*/
 bool EventLoop::register_callback(int fd, CallbackFunc pReadFunc, 
-	void * readArg, CallbackFunc pWriteFunc, void * writeArg)
+	void * readArg, CallbackFunc pWriteFunc, void * writeArg,
+	CallbackFunc pErrorFunc, void * errorArg)
 {
     unsigned i;
-    if((pReadFunc == NULL) && (pWriteFunc == NULL)) {
+    if(!pReadFunc && !pWriteFunc && !pErrorFunc) {
 	// nothing to do
         return false;
     }
@@ -69,12 +77,16 @@ bool EventLoop::register_callback(int fd, CallbackFunc pReadFunc,
     if(pReadFunc) {
         mPollCallbackList[i].pReadFunc = pReadFunc;
         mPollCallbackList[i].readArg = readArg;
-	mPollFdList[i].events |= POLLIN;
+	mPollFdList[i].events |= (POLLIN | POLLRDNORM);
     }
     if(pWriteFunc) {
         mPollCallbackList[i].pWriteFunc = pWriteFunc;
         mPollCallbackList[i].writeArg = writeArg;
-        mPollFdList[i].events |= POLLOUT;
+        mPollFdList[i].events |= (POLLOUT | POLLWRNORM);
+    }
+    if(pErrorFunc) {
+        mPollCallbackList[i].pErrorFunc = pErrorFunc;
+        mPollCallbackList[i].errorArg = errorArg;
     }
     mPollListChanged = true;
     return true;
@@ -102,7 +114,7 @@ void EventLoop::unregister(int fd)
 /*----------------------------------------------------------------------------*/
 void EventLoop::main()
 {
-    printf("Starting loop\n");
+    LOG_DEBUG("Starting loop");
     unsigned idx = 0;
     while(true) {
 	mPollListChanged = false;
@@ -113,21 +125,34 @@ void EventLoop::main()
 	    while(hitCnt > 0) {
 		idx = (idx >= mPollListSize) ? 0: idx+1;
 	    	unsigned revents = mPollFdList[idx].revents;
-		bool hit = false;
+		bool hit = (revents != 0);
 
-		if((revents & POLLIN) != 0) {
-		    mPollCallbackList[idx].pReadFunc(mPollCallbackList[idx].readArg);
-		    hit = true;
-		    if(mPollListChanged) {
-			break;
+		if((revents & (POLLIN | POLLRDNORM)) != 0) {
+		    CallbackFunc pFunc = mPollCallbackList[idx].pReadFunc;
+		    if(pFunc) {
+ 			pFunc(mPollCallbackList[idx].readArg);
+		        if(mPollListChanged) {
+			    break;
+		        }
 		    }
 		}
 
-		if((revents & POLLOUT) != 0) {
-		    mPollCallbackList[idx].pWriteFunc(mPollCallbackList[idx].writeArg);
-		    hit = true;
-		    if(mPollListChanged) {
-			break;
+		if((revents & (POLLOUT | POLLWRNORM)) != 0) {
+		    CallbackFunc pFunc = mPollCallbackList[idx].pWriteFunc;
+		    if(pFunc) {
+			pFunc(mPollCallbackList[idx].writeArg);
+		    	if(mPollListChanged) {
+			    break;
+			}
+		    }
+		}
+		if(revents & POLLERR) {
+		    CallbackFunc pFunc = mPollCallbackList[idx].pErrorFunc;
+		    if(pFunc) {
+			pFunc(mPollCallbackList[idx].errorArg);
+		    	if(mPollListChanged) {
+			    break;
+			}
 		    }
 		}
 
@@ -137,6 +162,6 @@ void EventLoop::main()
 	    }
 	}
     }
-    printf("Ending loop\n");
+    LOG_DEBUG("Ending loop");
 }
 

@@ -2,9 +2,10 @@
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <dns_sd.h>
+
 #include "capture.h"
 #include "logging.h"
-
+#include "event_loop.h"
 
 Capture::Capture()
     : m_captureHandle(0)
@@ -408,6 +409,59 @@ void Capture::set_hw_params()
 }        
 
 
+/*****************************************************************************/
+void Capture::read_callback(void * arg)
+{
+    Capture * pThis = reinterpret_cast<Capture *>(arg);
+
+    struct pollfd ufd;
+    unsigned short revents;
+
+    ufd.fd = pThis->mFd;
+    ufd.events = POLLIN | POLLRDNORM;
+    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &ufd, 1, &revents);
+    if(revents) {
+	pThis->do_loop();
+    }
+}
+
+
+/*****************************************************************************/
+void Capture::write_callback(void * arg)
+{
+    Capture * pThis = reinterpret_cast<Capture *>(arg);
+
+    struct pollfd ufd;
+    unsigned short revents;
+
+    ufd.fd = pThis->mFd;
+    ufd.events = POLLOUT | POLLWRNORM;
+    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &ufd, 1, &revents);
+    if(revents) {
+	pThis->do_loop();
+    }
+}
+
+
+
+/*****************************************************************************/
+void Capture::error_callback(void * arg)
+{
+    Capture * pThis = reinterpret_cast<Capture *>(arg);
+
+    struct pollfd ufd;
+    unsigned short revents;
+
+    ufd.fd = pThis->mFd;
+    ufd.events = POLLERR;
+    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &ufd, 1, &revents);
+    if(revents) {
+	pThis->do_loop();
+    }
+}
+
+
+/*****************************************************************************/
 void Capture::run()
 {
     const int frames = 100;
@@ -423,8 +477,31 @@ void Capture::run()
 
     snd_pcm_state_t PrevState = SND_PCM_STATE_SETUP;
 
-    while(1)
-    {
+    const int count = snd_pcm_poll_descriptors_count(handle);
+    if(count != 1) {
+	LOG_ERROR("Alsa using more that one file descriptor");
+	return;
+    }
+
+    struct pollfd ufd;
+    snd_pcm_poll_descriptors(handle, &ufd, 1);
+
+    int fd = ufd.fd;
+    unsigned events = ufd.events;
+    if(events & (POLLIN | POLLRDNORM)) {
+        EventLoop::instance().register_read_callback(fd, Capture::read_callback, this);
+    }
+    if(events & (POLLOUT | POLLWRNORM)) {
+       EventLoop::instance().register_write_callback(fd, Capture::write_callback, this);
+    }
+    EventLoop::instance().register_error_callback(fd, Capture::error_callback, this);
+    mFd = fd;
+}
+
+
+void Capture::do_loop()
+{
+#if 0
 	snd_pcm_state_t state = snd_pcm_state(handle);
 	if(state != PrevState) {
 	    printf("State is %s\n", snd_pcm_state_name(state));
@@ -457,8 +534,10 @@ void Capture::run()
             y = (9999.0 * y + value * value)/10000.0;
         }
 //        fprintf(stderr, "\r%015.2f\n", 10 * log10(y));
-    }
+#endif
 }
+
+
 
 /**
  * Initialise the Video capture

@@ -13,9 +13,11 @@ public:
 
     static EventLoop & instance() { if(!mInstance) { create(); } return *mInstance;};
 
-    bool register_read_callback(int fd, CallbackFunc pFunc, void * arg);
-    bool register_write_callback(int fd, CallbackFunc pFunc, void * arg);
-    void unregister(int fd);
+    bool register_read_callback(int, CallbackFunc, void *);
+    bool register_write_callback(int, CallbackFunc, void *);
+    bool register_error_callback(int, CallbackFunc, void *);
+
+    void unregister(int);
 
     void main();
 private:
@@ -23,14 +25,16 @@ private:
     static void create();
     EventLoop();
 
-    bool register_callback(int fd, CallbackFunc pReadFunc, void * readArg,
-        CallbackFunc pWriteFunc, void * writeArg);
+    bool register_callback(int, CallbackFunc, void *, CallbackFunc, void *,
+        	CallbackFunc, void *);
 
     struct CallbackEntry {
         CallbackFunc pReadFunc;
         void * readArg;
         CallbackFunc pWriteFunc;
         void * writeArg;
+        CallbackFunc pErrorFunc;
+        void * errorArg;
     };
    
     static EventLoop * mInstance;
