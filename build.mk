@@ -2,7 +2,7 @@ CFLAGS=-Wall -O3 -Wextra
 
 CC=gcc -c
 MAKEDEPEND=gcc -M $(CPPFLAGS)
-LINK=g++ $(LDFLAGS) -lasound -lm
+LINK=g++ $(LDFLAGS) -lasound -lm -lopus
 
 OBJS= capture.o event_loop.o sender.o logging.o main.o rtsp_server.o tcp_server.o \
       tcp_connection.o rtsp_connection.o network.o connection.o udp_client.o \

@@ -2,11 +2,16 @@
 #include <alsa/asoundlib.h>
 #include <math.h>
 #include <dns_sd.h>
+#include <opus/opus.h>
+#include <cstdint>
 
 #include "capture.h"
 #include "logging.h"
 #include "event_loop.h"
+#include "rtp_connection.h"
 
+
+/******************************************************************************/
 Capture::Capture()
     : m_captureHandle(0)
 {
@@ -15,6 +20,7 @@ Capture::Capture()
         LOG_ERROR("Failed to attach to stdout");
     }
 }
+
 
 /******************************************************************************/
 void Capture::find_source()
@@ -412,14 +418,13 @@ void Capture::set_hw_params()
 /*****************************************************************************/
 void Capture::read_callback(void * arg)
 {
-    Capture * pThis = reinterpret_cast<Capture *>(arg);
+//    LOG_DEBUG("read_callback");
 
-    struct pollfd ufd;
+    Capture * pThis = reinterpret_cast<Capture *>(arg);
     unsigned short revents;
 
-    ufd.fd = pThis->mFd;
-    ufd.events = POLLIN | POLLRDNORM;
-    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &ufd, 1, &revents);
+    pThis->mFd.revents = POLLIN | POLLRDNORM;
+    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &pThis->mFd, 1, &revents);
     if(revents) {
 	pThis->do_loop();
     }
@@ -429,14 +434,13 @@ void Capture::read_callback(void * arg)
 /*****************************************************************************/
 void Capture::write_callback(void * arg)
 {
-    Capture * pThis = reinterpret_cast<Capture *>(arg);
+//    LOG_DEBUG("write_callback");
 
-    struct pollfd ufd;
+    Capture * pThis = reinterpret_cast<Capture *>(arg);
     unsigned short revents;
 
-    ufd.fd = pThis->mFd;
-    ufd.events = POLLOUT | POLLWRNORM;
-    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &ufd, 1, &revents);
+    pThis->mFd.revents = POLLOUT | POLLWRNORM;
+    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &pThis->mFd, 1, &revents);
     if(revents) {
 	pThis->do_loop();
     }
@@ -447,14 +451,13 @@ void Capture::write_callback(void * arg)
 /*****************************************************************************/
 void Capture::error_callback(void * arg)
 {
-    Capture * pThis = reinterpret_cast<Capture *>(arg);
+//    LOG_DEBUG("error_callback");
 
-    struct pollfd ufd;
+    Capture * pThis = reinterpret_cast<Capture *>(arg);
     unsigned short revents;
 
-    ufd.fd = pThis->mFd;
-    ufd.events = POLLERR;
-    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &ufd, 1, &revents);
+    pThis->mFd.revents = POLLERR;
+    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &pThis->mFd, 1, &revents);
     if(revents) {
 	pThis->do_loop();
     }
@@ -464,30 +467,42 @@ void Capture::error_callback(void * arg)
 /*****************************************************************************/
 void Capture::run()
 {
-    const int frames = 100;
-    short * buffer = (short *) malloc(frames * 4);
-    double y = 0.0;
+    int error;
+
+    const int frames = 480;  // 48000 / 120 => 1/100 sec
+    mBuffer = new int16_t[frames * 2]; // 4);
 
     snd_pcm_t * handle = m_captureHandle;
 
+    mEncoder = opus_encoder_create(48000, 2, OPUS_APPLICATION_AUDIO, &error);
+    if(mEncoder == 0) {
+	LOG_ERROR("Failed to create opus encoder: %s", opus_strerror(error));
+    }
+    opus_encoder_ctl(mEncoder, OPUS_SET_BITRATE(128000));
+    opus_encoder_ctl(mEncoder, OPUS_SET_COMPLEXITY(9));
+
+
     int status = snd_pcm_start(handle);
     if(status < 0) {	
-	LOG_ERROR("Failed to start\n");
+	LOG_ERROR("Failed to start");
     }
 
-    snd_pcm_state_t PrevState = SND_PCM_STATE_SETUP;
+    snd_pcm_state_t state = snd_pcm_state(handle);
+    printf("State is %s\n", snd_pcm_state_name(state));
+    
+    LOG_DEBUG("Record started");
 
     const int count = snd_pcm_poll_descriptors_count(handle);
     if(count != 1) {
 	LOG_ERROR("Alsa using more that one file descriptor");
 	return;
     }
+	
 
-    struct pollfd ufd;
-    snd_pcm_poll_descriptors(handle, &ufd, 1);
+    snd_pcm_poll_descriptors(handle, &mFd, 1);
 
-    int fd = ufd.fd;
-    unsigned events = ufd.events;
+    int fd = mFd.fd;
+    unsigned events = mFd.events;
     if(events & (POLLIN | POLLRDNORM)) {
         EventLoop::instance().register_read_callback(fd, Capture::read_callback, this);
     }
@@ -495,48 +510,61 @@ void Capture::run()
        EventLoop::instance().register_write_callback(fd, Capture::write_callback, this);
     }
     EventLoop::instance().register_error_callback(fd, Capture::error_callback, this);
-    mFd = fd;
 }
 
 
+/*****************************************************************************/
 void Capture::do_loop()
 {
-#if 0
-	snd_pcm_state_t state = snd_pcm_state(handle);
+    static snd_pcm_state_t PrevState = SND_PCM_STATE_SETUP;
+	
+    snd_pcm_t * handle = m_captureHandle;
+
+    snd_pcm_state_t state = snd_pcm_state(handle);
 	if(state != PrevState) {
 	    printf("State is %s\n", snd_pcm_state_name(state));
 	    PrevState = state;
 	}
 
-        int status = snd_pcm_readi(handle, buffer, frames);
+    // frames can only be 120,240,480 or 960 @ 48000
+    const int frames = 480;
+
+        int status = snd_pcm_readi(handle, mBuffer, frames);
         if(status < 0)
         {
             if(status == -EPIPE)
             {
-                LOG_ERROR("Over run occurred\n");
+                LOG_ERROR("Over run occurred");
                 snd_pcm_prepare(handle);
             }
             else
             {
-                LOG_ERROR("Read error:%s\n", snd_strerror(status));
+                LOG_ERROR("Read error:%s", snd_strerror(status));
             }
         }
         else if(status != (int) frames)
         {
-            fprintf(stderr, "Short read\n");
+            LOG_ERROR("Short read");
         }
-        int i;
-        double value;
-        for(i = 0; i < status; i++)
-        {
-            value = buffer[i];
-//            printf("%f\n", value);
-            y = (9999.0 * y + value * value)/10000.0;
-        }
-//        fprintf(stderr, "\r%015.2f\n", 10 * log10(y));
-#endif
+       
+
+	int opus_status = opus_encode(mEncoder, mBuffer, frames,
+			mpConn->get_packet_buffer(), 
+			mpConn->get_packet_buffer_size());
+
+	if(opus_status <= 0) {
+	    LOG_ERROR("Opus encode failed %s", opus_strerror(opus_status));
+	}
+	
+	mpConn->send_packet(opus_status, 20);
 }
 
+
+/*****************************************************************************/
+void Capture::attach(Connection * conn) 
+{ 
+    mpConn = dynamic_cast<RtpConnection *>(conn); 
+}
 
 
 /**
@@ -544,8 +572,8 @@ void Capture::do_loop()
  */
 void Capture::init()
 {
-    find_source();
-    find_mixer("hw:0");
+//    find_source();
+//    find_mixer("hw:0");
     open_pcm();
     set_hw_params();
     run();

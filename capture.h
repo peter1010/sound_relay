@@ -1,10 +1,12 @@
 #ifndef _CAPTURE_H_
 #define _CAPTURE_H_
 
+#include <poll.h>
 #include <alsa/asoundlib.h>
 
+class RtpConnection;
 class Connection;
-
+struct OpusEncoder;
 
 class Capture
 {
@@ -12,8 +14,10 @@ private:
     snd_pcm_t * m_captureHandle;
     snd_output_t * m_stdout;
     snd_pcm_uframes_t m_periodSize;
-    Connection * pConn;
-    int mFd;
+    RtpConnection * mpConn;
+    struct pollfd mFd;
+    short * mBuffer;
+    OpusEncoder * mEncoder;
 
     static void test_access(snd_pcm_t *, snd_pcm_hw_params_t *);
     static void test_formats(snd_pcm_t *, snd_pcm_hw_params_t *);
@@ -32,7 +36,7 @@ private:
 public:
     Capture();
     void init();
-    void attach(Connection * conn) { pConn = conn; };
+    void attach(Connection * conn);
 
     static void read_callback(void *);
     static void write_callback(void *);

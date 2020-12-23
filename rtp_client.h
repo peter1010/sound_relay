@@ -23,6 +23,7 @@ protected:
 private:
 
     Capture * mpSource;
+    unsigned char mPayloadType;
 };
 
 #endif

@@ -9,11 +9,12 @@ RtspServer::RtspServer()
 {
     LOG_DEBUG("RtspServer");
 
+    register_connection_factory(RtspServer::connection_factory, this);
+
     // Start with port 554
     if(!init(554)) {
 	init(8554);
     }
-    register_connection_factory(RtspServer::connection_factory, this);
 }
 
 

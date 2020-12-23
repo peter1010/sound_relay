@@ -292,7 +292,9 @@ std::string RtspConnection::generate_describe_response()
 	       	+ pSession->get_pathname() + "\r\n" \
 	    "m=audio " + std::to_string(pSession->get_our_rtp_port()) 
 	    	+ " RTP/AVP 31\r\n" \
-	    "a=rtpmap:31 OPUS/48000/2\r\n";
+	    "a=rtpmap:" + std::to_string(pSession->get_payload_type()) 
+	    	+ " opus/" + std::to_string(pSession->get_raw_bit_rate()) 
+		+ "/" + std::to_string(pSession->get_num_of_channels()) +"\r\n";
 
     return std::string("RTSP/1.0 200 OK\r\n"\
 	    "CSeq: ") + mCseq + "\r\n" \
