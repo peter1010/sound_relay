@@ -9,6 +9,7 @@
 /*----------------------------------------------------------------------------*/
 UdpConnection::UdpConnection()
 {
+    LOG_DEBUG("UdpConnection");
 }
 
 
@@ -26,7 +27,7 @@ bool UdpConnection::recv()
     unsigned maxLen = 0; 
     Byte * pBuf = get_recv_buf(maxLen);
 
-    const int status = ::recv(get_sock(), &pBuf, maxLen, 0);
+    const int status = ::recv(get_sock(), pBuf, maxLen, 0);
 
     if(status <= 0) {
 	if(status < 0) {

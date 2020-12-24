@@ -1,6 +1,5 @@
 
 #include <sys/random.h>
-#include <opus/opus.h>
 
 #include "logging.h"
 #include "rtp_connection.h"

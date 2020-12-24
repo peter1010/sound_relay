@@ -8,6 +8,7 @@
 /*----------------------------------------------------------------------------*/
 Connection::Connection() :  mpRecvBuf(NULL)
 {
+    LOG_DEBUG("Connection");
 }
 
 

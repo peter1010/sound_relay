@@ -64,6 +64,8 @@ bool EventLoop::register_callback(int fd, CallbackFunc pReadFunc,
 
     // no match so add to end
     if(i >= mPollListSize) {
+        LOG_DEBUG("Register %i", fd);
+
         if( i < MAX_FD_HANDLERS) {
             mPollFdList[i].fd = fd;
             mPollFdList[i].events = 0;
@@ -102,11 +104,18 @@ void EventLoop::unregister(int fd)
             break;
         }
     }
+    if(i >= mPollListSize) {
+	return;
+    }
+
+    LOG_DEBUG("Unregister %i", fd);
+
+    --mPollListSize;
+
     for(;i < mPollListSize; i++) {
 	mPollFdList[i] = mPollFdList[i+1];
 	mPollCallbackList[i] = mPollCallbackList[i+1];
     }
-    --mPollListSize;
     mPollListChanged = true;
 }
 

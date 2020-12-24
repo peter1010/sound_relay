@@ -19,12 +19,13 @@ TcpServer::TcpServer() : Network(1), mSock(-1)
 /*----------------------------------------------------------------------------*/
 TcpServer::~TcpServer()
 {
+    LOG_DEBUG("~TcpServer");
     if(mSock) {
+   	EventLoop::instance().unregister(mSock);
         ::close(mSock);
 	mSock = -1;
     }
 }
-
 
 
 /*----------------------------------------------------------------------------*/

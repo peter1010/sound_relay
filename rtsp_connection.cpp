@@ -69,6 +69,18 @@ RtspConnection::RtspConnection() :  mParsingState(PARSING_REQUEST_LINE)
 
 
 /*----------------------------------------------------------------------------*/
+RtspConnection::~RtspConnection()
+{
+    std::string pathname = extract_path(mUrl);
+    Session * pSession = Media::get_session(pathname.c_str());
+
+    if(pSession) {
+	pSession->disconnect();
+    }
+}
+
+
+/*----------------------------------------------------------------------------*/
 unsigned short RtspConnection::get_rtsp_server_port() const
 {
     return dynamic_cast<TcpServer *>(get_network())->get_listening_port();
@@ -266,7 +278,7 @@ void RtspConnection::parse_describe_request(const std::string & str)
 /*----------------------------------------------------------------------------*/
 std::string RtspConnection::generate_describe_response()
 {
-    std::string pathname = extract_path(mUrl);
+    const std::string pathname = extract_path(mUrl);
     Session * pSession = Media::get_session(pathname.c_str());
     // Mandatory fields:
     // CSeq:
@@ -279,6 +291,7 @@ std::string RtspConnection::generate_describe_response()
     // s = (session name)
     // t = (time the session is active)
     // m = (media name and transport address)
+    const std::string pt = std::to_string(pSession->get_payload_type());
     std::string sdp = "v=0\r\n" \
 	    "o=- " + std::to_string(pSession->get_sdp_id()) + " " 
 	    	+ std::to_string(pSession->get_sdp_ver()) + " IN IP4 "
@@ -291,10 +304,10 @@ std::string RtspConnection::generate_describe_response()
 	    	+ std::to_string(get_rtsp_server_port()) + "/"
 	       	+ pSession->get_pathname() + "\r\n" \
 	    "m=audio " + std::to_string(pSession->get_our_rtp_port()) 
-	    	+ " RTP/AVP 31\r\n" \
-	    "a=rtpmap:" + std::to_string(pSession->get_payload_type()) 
-	    	+ " opus/" + std::to_string(pSession->get_raw_bit_rate()) 
-		+ "/" + std::to_string(pSession->get_num_of_channels()) +"\r\n";
+	    	+ " RTP/AVP " + pt +"\r\n" \
+	    "a=rtpmap:" + pt 
+	        + " opus/" + std::to_string(pSession->get_raw_bit_rate()) 
+		+ "/" + std::to_string(pSession->get_num_of_channels()) + "\r\n";
 
     return std::string("RTSP/1.0 200 OK\r\n"\
 	    "CSeq: ") + mCseq + "\r\n" \
@@ -307,7 +320,7 @@ std::string RtspConnection::generate_describe_response()
 /*----------------------------------------------------------------------------*/
 void RtspConnection::parse_setup_request(const std::string & str)
 {
-    std::string pathname = extract_path(mUrl);
+    const std::string pathname = extract_path(mUrl);
     Session * pSession = Media::get_session(pathname.c_str());
 
     std::string name;

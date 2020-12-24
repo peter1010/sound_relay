@@ -8,6 +8,7 @@ class RtspConnection : public TcpConnection
 {
 public:
     RtspConnection();
+    ~RtspConnection();
 
     void parse_line(const std::string & str);
 

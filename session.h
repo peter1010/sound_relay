@@ -5,6 +5,7 @@
 
 class Capture;
 class RtpClient;
+class RtcpClient;
 
 class Session
 {
@@ -35,12 +36,13 @@ public:
 
     Capture * get_source() const { return mpSource; };
 
-    unsigned char get_payload_type() const { return 31; };
+    unsigned char get_payload_type() const { return 97; };
     unsigned short get_raw_bit_rate() const { return 48000; };
     unsigned char get_num_of_channels() const { return 2; };
 
     void play();
 
+    void disconnect();
 private:
 
     IpAddress mOurAddress;
@@ -53,6 +55,7 @@ private:
 
     Capture * mpSource;
     RtpClient * mpRtp;	
+    RtcpClient * mpRtcp;
 };
 
 #endif

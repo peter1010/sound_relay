@@ -12,14 +12,27 @@
 
 
 /******************************************************************************/
-Capture::Capture()
-    : m_captureHandle(0)
+Capture::Capture() : mpConn(0), mpBuffer(0), mpEncoder(0)
 {
-    int status = snd_output_stdio_attach(&m_stdout, stdout, 0);
-    if(status < 0) {
-        LOG_ERROR("Failed to attach to stdout");
+}
+
+
+/******************************************************************************/
+Capture::~Capture()
+{
+    if(mpConn) {
+	mpConn = 0;
+    }
+    if(mpBuffer) {
+	delete [] mpBuffer;
+	mpBuffer = 0;
+    }
+    if(mpEncoder) {
+	opus_encoder_destroy(mpEncoder);
+	mpEncoder = 0;
     }
 }
+
 
 
 /******************************************************************************/
@@ -174,143 +187,30 @@ void Capture::find_mixer(const char * device)
 
 
 
+/*****************************************************************************/
 /**
  * Open the PCM device (default)
  *
  */
-void Capture::open_pcm(const char * alsa_dev) 
+void Capture::open(const char * alsa_dev) 
 {
+    if(mPcmHandle) {
+	LOG_ERROR("PCM Handle already exists");
+	return;
+    }
+
+    snd_pcm_t * handle;
     if(alsa_dev == NULL) {
         alsa_dev = "default";
     }
-    int status = snd_pcm_open(&m_captureHandle, alsa_dev,
-            SND_PCM_STREAM_CAPTURE, 0);
+    const int status = snd_pcm_open(&handle, alsa_dev,
+		SND_PCM_STREAM_CAPTURE, 0);
     if(status < 0) {
         LOG_ERROR("snd_pcm_open failed:%s", snd_strerror(status));
+    } else {
+	snd_pcm_poll_descriptors(handle, &mFd, 1);
+	mPcmHandle = handle;
     }
-}
-
-/*****************************************************************************/
-void Capture::test_access(snd_pcm_t * handle, snd_pcm_hw_params_t * params)
-{
-    static const snd_pcm_access_t accesses[] = {
-    	SND_PCM_ACCESS_MMAP_INTERLEAVED,
-	SND_PCM_ACCESS_MMAP_NONINTERLEAVED,
-	SND_PCM_ACCESS_MMAP_COMPLEX,
-	SND_PCM_ACCESS_RW_INTERLEAVED,
-	SND_PCM_ACCESS_RW_NONINTERLEAVED,
-    };
-    unsigned i;
-    for(i = 0; i < sizeof(accesses)/sizeof(snd_pcm_access_t); i++) {
-        const int status = snd_pcm_hw_params_test_access(handle, params,
-                accesses[i]);
-        if(status == 0) {
-            printf("Access type %s is supported\n",
-                    snd_pcm_access_name(accesses[i]));
-        }
-    }
-}
-
-
-/*****************************************************************************/
-void Capture::test_formats(snd_pcm_t * handle, snd_pcm_hw_params_t * params)
-{
-   static const snd_pcm_format_t formats[] = {
-	SND_PCM_FORMAT_S8,
-	SND_PCM_FORMAT_U8,
-	SND_PCM_FORMAT_S16_LE,
-	SND_PCM_FORMAT_S16_BE,
-	SND_PCM_FORMAT_U16_LE,
-	SND_PCM_FORMAT_U16_BE,
-	SND_PCM_FORMAT_S24_LE,
-	SND_PCM_FORMAT_S24_BE,
-	SND_PCM_FORMAT_U24_LE,
-	SND_PCM_FORMAT_U24_BE,
-	SND_PCM_FORMAT_S32_LE,
-	SND_PCM_FORMAT_S32_BE,
-	SND_PCM_FORMAT_U32_LE,
-	SND_PCM_FORMAT_U32_BE,
-	SND_PCM_FORMAT_FLOAT_LE,
-	SND_PCM_FORMAT_FLOAT_BE,
-	SND_PCM_FORMAT_FLOAT64_LE,
-	SND_PCM_FORMAT_FLOAT64_BE,
-	SND_PCM_FORMAT_IEC958_SUBFRAME_LE,
-	SND_PCM_FORMAT_IEC958_SUBFRAME_BE,
-	SND_PCM_FORMAT_MU_LAW,
-	SND_PCM_FORMAT_A_LAW,
-	SND_PCM_FORMAT_IMA_ADPCM,
-	SND_PCM_FORMAT_MPEG,
-	SND_PCM_FORMAT_GSM,
-	SND_PCM_FORMAT_SPECIAL,
-	SND_PCM_FORMAT_S24_3LE,
-	SND_PCM_FORMAT_S24_3BE,
-	SND_PCM_FORMAT_U24_3LE,
-	SND_PCM_FORMAT_U24_3BE,
-	SND_PCM_FORMAT_S20_3LE,
-	SND_PCM_FORMAT_S20_3BE,
-	SND_PCM_FORMAT_U20_3LE,
-	SND_PCM_FORMAT_U20_3BE,
-	SND_PCM_FORMAT_S18_3LE,
-	SND_PCM_FORMAT_S18_3BE,
-	SND_PCM_FORMAT_U18_3LE,
-	SND_PCM_FORMAT_U18_3BE,
-    }; 
-    unsigned i;
-    for(i = 0; i < sizeof(formats)/sizeof(snd_pcm_format_t); i++) {
-        const int status = snd_pcm_hw_params_test_format(handle, params,
-                formats[i]);
-        if(status == 0) {
-            printf("Format type %s is supported\n",
-                    snd_pcm_format_name(formats[i]));
-        }
-    }
-}
-
-/*****************************************************************************/
-void Capture::test_channels(snd_pcm_hw_params_t * params)
-{
-    unsigned int min = 0;
-    unsigned int max = 0;
-
-    int status = snd_pcm_hw_params_get_channels_min(params, &min);
-    if(status < 0) {
-	LOG_ERROR("cannot get minimum channels count: %s",
-                snd_strerror(status));
-	return;
-    }
-    status = snd_pcm_hw_params_get_channels_max(params, &max);
-    if(status < 0) {
-	LOG_ERROR("cannot get maximum channels count: %s",
-                snd_strerror(status));
-	return;
-    }
-    printf("Channels: %i - %i\n", min, max);
-#if 0
-    // snd_pcm_hw_params_test_channels(handle, params, i) == 0)
-#endif
-    putchar('\n');
-}
-
-
-/*****************************************************************************/
-void Capture::test_rates(snd_pcm_hw_params_t * params)
-{
-    unsigned int min = 0;
-    unsigned int max = 0;
-    int status = snd_pcm_hw_params_get_rate_min(params, &min, NULL);
-    if(status < 0) {
-	LOG_ERROR("cannot get minimum rate: %s\n", snd_strerror(status));
-	return;
-    }
-    status = snd_pcm_hw_params_get_rate_max(params, &max, NULL);
-    if(status < 0) {
-	LOG_ERROR("cannot get maximum rate: %s\n", snd_strerror(status));
-	return;
-    }
-
-    printf("Sample rates: %i - %i\n", min, max);
-    
-    // snd_pcm_hw_params_test_rate(handle, params, min + 1, 0))
 }
 
 
@@ -318,7 +218,12 @@ void Capture::test_rates(snd_pcm_hw_params_t * params)
 void Capture::set_hw_params()
 {
     snd_pcm_hw_params_t * params;
-    snd_pcm_t * handle = m_captureHandle;
+    snd_pcm_t * handle = mPcmHandle;
+
+    if(!handle) {
+	LOG_ERROR("Set HW params failed as no PCM handle defined");
+	return;
+    }
 
     int status = snd_pcm_hw_params_malloc(&params);
     if(status < 0) {
@@ -373,7 +278,7 @@ void Capture::set_hw_params()
 
 	// Select sample rate
         test_rates(params);
-        unsigned int val = 44100;
+        unsigned int val = 48000;
         int dir = 0;
 
         status = snd_pcm_hw_params_set_rate_near(handle, params, &val, &dir);
@@ -384,7 +289,7 @@ void Capture::set_hw_params()
         printf("Set sample rate to %i\n", val);
 
         // Set period time (i.e. between interrupts)
-        snd_pcm_uframes_t frames = 32;
+//        snd_pcm_uframes_t frames = 32;
         val = 10000;   // 10 ms
         status = snd_pcm_hw_params_set_period_time_near(handle, params, &val, &dir);
 	if(status < 0) {
@@ -408,11 +313,45 @@ void Capture::set_hw_params()
             LOG_ERROR("Failed to set HW parameters: %s\n", snd_strerror(status));
         }
 
-        snd_pcm_hw_params_dump(params, m_stdout);
+        dump_hw_params(params);
     } while(false);
 
     snd_pcm_hw_params_free(params);
 }        
+
+
+/*****************************************************************************/
+void Capture::set_sw_params()
+{
+    snd_pcm_sw_params_t * params;
+    snd_pcm_t * handle = mPcmHandle;
+
+    if(!handle) {
+	LOG_ERROR("Set SW params failed as no PCM handle defined");
+	return;
+    }
+
+    int status = snd_pcm_sw_params_malloc(&params);
+    if(status < 0) {
+        LOG_ERROR("snd_pcm_sw_params_malloc() failed => %s", snd_strerror(status));
+        return;
+    }
+
+    do {
+	// Fill in the params structure will full possibilities of the all
+	// configurations for this device
+        status = snd_pcm_sw_params_current(handle, params);
+        if(status < 0) {
+            LOG_ERROR("snd_pcm_sw_params_current failed:%s", snd_strerror(status));
+            break;
+        }
+
+        dump_sw_params(params);
+    } while(false);
+
+    snd_pcm_sw_params_free(params);
+}        
+
 
 
 /*****************************************************************************/
@@ -424,7 +363,7 @@ void Capture::read_callback(void * arg)
     unsigned short revents;
 
     pThis->mFd.revents = POLLIN | POLLRDNORM;
-    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &pThis->mFd, 1, &revents);
+    snd_pcm_poll_descriptors_revents(pThis->mPcmHandle, &pThis->mFd, 1, &revents);
     if(revents) {
 	pThis->do_loop();
     }
@@ -440,7 +379,7 @@ void Capture::write_callback(void * arg)
     unsigned short revents;
 
     pThis->mFd.revents = POLLOUT | POLLWRNORM;
-    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &pThis->mFd, 1, &revents);
+    snd_pcm_poll_descriptors_revents(pThis->mPcmHandle, &pThis->mFd, 1, &revents);
     if(revents) {
 	pThis->do_loop();
     }
@@ -457,7 +396,7 @@ void Capture::error_callback(void * arg)
     unsigned short revents;
 
     pThis->mFd.revents = POLLERR;
-    snd_pcm_poll_descriptors_revents(pThis->m_captureHandle, &pThis->mFd, 1, &revents);
+    snd_pcm_poll_descriptors_revents(pThis->mPcmHandle, &pThis->mFd, 1, &revents);
     if(revents) {
 	pThis->do_loop();
     }
@@ -470,16 +409,18 @@ void Capture::run()
     int error;
 
     const int frames = 480;  // 48000 / 120 => 1/100 sec
-    mBuffer = new int16_t[frames * 2]; // 4);
+    mpBuffer = new int16_t[frames * 2]; // 4);
 
-    snd_pcm_t * handle = m_captureHandle;
+    snd_pcm_t * handle = mPcmHandle;
 
-    mEncoder = opus_encoder_create(48000, 2, OPUS_APPLICATION_AUDIO, &error);
-    if(mEncoder == 0) {
+    mpEncoder = opus_encoder_create(48000, 2, OPUS_APPLICATION_AUDIO, &error);
+    if(mpEncoder == 0) {
 	LOG_ERROR("Failed to create opus encoder: %s", opus_strerror(error));
+	return;
     }
-    opus_encoder_ctl(mEncoder, OPUS_SET_BITRATE(128000));
-    opus_encoder_ctl(mEncoder, OPUS_SET_COMPLEXITY(9));
+    
+    opus_encoder_ctl(mpEncoder, OPUS_SET_BITRATE(128000));
+    opus_encoder_ctl(mpEncoder, OPUS_SET_COMPLEXITY(9));
 
 
     int status = snd_pcm_start(handle);
@@ -499,8 +440,6 @@ void Capture::run()
     }
 	
 
-    snd_pcm_poll_descriptors(handle, &mFd, 1);
-
     int fd = mFd.fd;
     unsigned events = mFd.events;
     if(events & (POLLIN | POLLRDNORM)) {
@@ -518,7 +457,7 @@ void Capture::do_loop()
 {
     static snd_pcm_state_t PrevState = SND_PCM_STATE_SETUP;
 	
-    snd_pcm_t * handle = m_captureHandle;
+    snd_pcm_t * handle = mPcmHandle;
 
     snd_pcm_state_t state = snd_pcm_state(handle);
 	if(state != PrevState) {
@@ -529,7 +468,7 @@ void Capture::do_loop()
     // frames can only be 120,240,480 or 960 @ 48000
     const int frames = 480;
 
-        int status = snd_pcm_readi(handle, mBuffer, frames);
+        int status = snd_pcm_readi(handle, mpBuffer, frames);
         if(status < 0)
         {
             if(status == -EPIPE)
@@ -548,7 +487,7 @@ void Capture::do_loop()
         }
        
 
-	int opus_status = opus_encode(mEncoder, mBuffer, frames,
+	int opus_status = opus_encode(mpEncoder, mpBuffer, frames,
 			mpConn->get_packet_buffer(), 
 			mpConn->get_packet_buffer_size());
 
@@ -556,7 +495,7 @@ void Capture::do_loop()
 	    LOG_ERROR("Opus encode failed %s", opus_strerror(opus_status));
 	}
 	
-	mpConn->send_packet(opus_status, 20);
+	mpConn->send_packet(opus_status, 480);
 }
 
 
@@ -567,6 +506,7 @@ void Capture::attach(Connection * conn)
 }
 
 
+/*****************************************************************************/
 /**
  * Initialise the Video capture
  */
@@ -574,7 +514,8 @@ void Capture::init()
 {
 //    find_source();
 //    find_mixer("hw:0");
-    open_pcm();
+    open();
     set_hw_params();
+    set_sw_params();
     run();
 }
