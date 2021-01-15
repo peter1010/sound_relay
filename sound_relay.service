@@ -1,0 +1,15 @@
+##
+# Copyright (c) 2021 Peter Leese
+#
+# Licensed under the GPL License. See LICENSE file in the project root for full license information.  
+##
+
+[Unit]
+Description=Sound Relay
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/sound_relay
+Nice=19
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
