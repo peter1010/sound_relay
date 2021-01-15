@@ -10,9 +10,9 @@ OBJS= capture.o event_loop.o sender.o logging.o main.o rtsp_server.o tcp_server.
       sound.o rtcp_client.o rtcp_connection.o
 
 .PHONY: all
-all: capture
+all: sound_relay
 
-capture: $(OBJS)
+sound_relay: $(OBJS)
 	$(LINK) $(OBJS) -o $@
 
 

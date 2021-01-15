@@ -55,11 +55,11 @@ setup(
     author='Peter1010',
     author_email='peter1010@localnet',
     license='GPL',
-    package_dir={'batt_checker': 'py_src' },
+    package_dir={'sound_relay': 'py_src' },
     packages=['sound_relay'],
     data_files=[
         ('/usr/lib/systemd/system',
-         ('sound_relay.service')),
+         ('sound_relay.service',)),
         ('/usr/bin/', (get_sound_relay_exe(), ))],
     cmdclass={'install': my_install, 'build': my_build}
 )

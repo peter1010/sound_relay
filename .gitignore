@@ -1,0 +1,3 @@
+build
+pkg
+c_src/__*__
