@@ -18,12 +18,23 @@ public:
     unsigned short get_listening_port() const { return mListeningPort; };
 
 protected:
-    bool init(unsigned short port, IpAddress addr = AnyAddress);
+    bool init(unsigned short, const IpAddress &);
 
-    static void accept(void * arg);
- 
+    static void accept(void *);
+    static void alt_accept(void *);
+
+    void accept(int);
+
+    static int create_ipv4_socket(uint16_t, uint32_t);
+
+    static int create_ipv6_socket(uint16_t, const struct in6_addr &);
+
+    static int bind_and_listen(int, uint16_t, const sockaddr *,	socklen_t);
+
+
 private:
     int mSock;
+    int mAltSock;
     IpAddress mHostIp;
     unsigned short mListeningPort;
  

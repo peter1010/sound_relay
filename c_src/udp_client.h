@@ -14,12 +14,14 @@ public:
     UdpClient();
     virtual ~UdpClient() = 0;
 
-    const IpAddress & get_hostip() const { return NoAddress; };
+    const IpAddress & get_hostip() const { return IpAddress::NoAddress(); };
 
 protected:
     bool init(unsigned short port, const IpAddress & addr, 
-		    unsigned short localPort = 0,
-		    const IpAddress & localAddr = AnyAddress);
+		    unsigned short localPort,
+		    const IpAddress & localAddr);
+    
+    bool init(unsigned short port, const IpAddress & addr);
 
 private:
     

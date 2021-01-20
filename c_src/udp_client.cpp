@@ -22,6 +22,12 @@ UdpClient::~UdpClient()
 }
 
 
+/*----------------------------------------------------------------------------*/
+bool UdpClient::init(unsigned short port, const IpAddress & address)
+{
+    return init(port, address, 0, IpAddress::AnyAddress());
+}
+
 
 /*----------------------------------------------------------------------------*/
 bool UdpClient::init(unsigned short port, const IpAddress & address, 
