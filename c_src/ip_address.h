@@ -2,6 +2,7 @@
 #define _IP_ADDRESS_H_
 
 #include <netinet/ip.h>
+#include "ip_version.h"
 
 typedef uint32_t RawIpv4_t;
 typedef uint8_t RawIpv6_t[16];
@@ -15,34 +16,37 @@ public:
     IpAddress(const struct in_addr &);
     IpAddress(const struct in6_addr &);
     IpAddress(const struct sockaddr_storage &);
+    IpAddress(const struct sockaddr *);
 
     ~IpAddress();
 
     // Get Ipv4 as a uint32_t
-    operator RawIpv4_t() const;
+    RawIpv4_t get_raw_ipv4() const;
 
     operator struct in6_addr &() const;
 
     IpAddress & operator=(const IpAddress &);
-    IpAddress & operator=(uint32_t);
+    IpAddress & operator=(RawIpv4_t);
     IpAddress & operator=(const struct in_addr &);
 
-//    bool operator==(const IpAddress &) const;
-//    bool operator!=(const IpAddress &) const;
+    bool operator==(const IpAddress &) const;
+    bool operator!=(const IpAddress & other) const { return !(*this==other);};
 
     const char * c_str() const;
 
-    bool is_ipv6() const;
-    bool is_ipv4() const;
-    bool is_any() const;
+    bool is_version(IpVersion_t ver) const;
+    bool is_ipv6() const { return is_version(IPv6); };
+    bool is_ipv4() const { return is_version(IPv4); };
+    bool is_any() const { return is_version(ANY); };
 
     static const IpAddress & AnyAddress();
 
     static const IpAddress & AnyIpv6Address();
 
     static const IpAddress & AnyIpv4Address();
-    
+
     static const IpAddress & NoAddress();
+
 protected:
     void update_ipv4_address(RawIpv4_t);
 
@@ -50,28 +54,23 @@ protected:
 
     void update_ipv6_address(const RawIpv6_t);
 
-    inline void update_ipv6_address(const struct in6_addr & addr) 
+    inline void update_ipv6_address(const struct in6_addr & addr)
     {
-    	update_ipv6_address(reinterpret_cast<const uint8_t *>(&addr)); 
+    	update_ipv6_address(reinterpret_cast<const uint8_t *>(&addr));
     };
-	
+
     void update_address(const struct sockaddr_storage & addr);
 
     void remove_address();
 
 private:
-    enum IpVersion {
-	ANY,
-	IPv4,
-	IPv6
-    };
- 
+
     struct Address {
 	union {
 	    RawIpv4_t v4Addr;
 	    RawIpv6_t v6Addr;
 	};
-	IpVersion ver;
+	IpVersion_t ver;
 	int refCnt;
 
 	Address() : ver(ANY), refCnt(1) {};

@@ -30,9 +30,9 @@ protected:
 
     virtual void send(const Byte *, unsigned) = 0;
 
-    const char * get_hostname() const { return mpNetwork->get_hostname(); };
+    const char * get_hostname() const;
 
-    const IpAddress & get_hostip() const { return mpNetwork->get_hostip(); };
+    IpAddress get_hostip(IpVersion_t ver) const;
 
     const IpAddress & get_peer_address() const { return mPeerAddress; };
 

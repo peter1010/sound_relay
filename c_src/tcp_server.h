@@ -14,7 +14,6 @@ public:
     TcpServer();
     virtual ~TcpServer() = 0;
 
-    const IpAddress & get_hostip() const { return mHostIp; };
     unsigned short get_listening_port() const { return mListeningPort; };
 
 protected:
@@ -35,9 +34,8 @@ protected:
 private:
     int mSock;
     int mAltSock;
-    IpAddress mHostIp;
     unsigned short mListeningPort;
- 
+
     TcpServer(const TcpServer &);
     TcpServer & operator=(const TcpServer &);
 };
