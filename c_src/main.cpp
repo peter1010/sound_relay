@@ -5,13 +5,17 @@
 #include "event_loop.h"
 #include "logging.h"
 
-int main(int argc, char * argv[])
+
+/******************************************************************************/
+int main(int /*argc*/, char ** /*argv[]*/)
 {
     set_logging_level(5);
 
     RtspServer * p = new RtspServer();
 
     EventLoop::instance().main();
+
+    delete p;
 //    Capture cap;
 //    cap.init();
 }

@@ -6,12 +6,18 @@
 #include "logging.h"
 
 /******************************************************************************/
-IpAddress::IpAddress() : mpAddr(0) 
-{	 
+/**
+ * Construct a empty (null) address
+ */
+IpAddress::IpAddress() : mpAddr(0)
+{
 }
 
 
 /******************************************************************************/
+/**
+ * Construct an IPv4 address based on 32 bit unsigned value
+ */
 IpAddress::IpAddress(uint32_t ipv4Addr) : mpAddr(0)
 {
     update_ipv4_address(ipv4Addr);
@@ -19,6 +25,9 @@ IpAddress::IpAddress(uint32_t ipv4Addr) : mpAddr(0)
 
 
 /******************************************************************************/
+/**
+ * Construct an IPv4 address based on the contents of struct in_addr
+ */
 IpAddress::IpAddress(const struct in_addr & ipv4Addr) : mpAddr(0)
 {
     update_ipv4_address(ipv4Addr);
@@ -26,6 +35,9 @@ IpAddress::IpAddress(const struct in_addr & ipv4Addr) : mpAddr(0)
 
 
 /******************************************************************************/
+/** 
+ * Construct an Ipv6 address based on the contents of struct in6_addr
+ */
 IpAddress::IpAddress(const struct in6_addr & ipv6Addr) : mpAddr(0)
 {
     update_ipv6_address(ipv6Addr);
@@ -33,6 +45,9 @@ IpAddress::IpAddress(const struct in6_addr & ipv6Addr) : mpAddr(0)
 
 
 /******************************************************************************/
+/**
+ * Copy constructor
+ */
 IpAddress::IpAddress(const IpAddress & addr)
 {
     mpAddr = addr.mpAddr;
@@ -43,6 +58,9 @@ IpAddress::IpAddress(const IpAddress & addr)
 
 
 /******************************************************************************/
+/**
+ * Construct an IP address based on the IP address found in a struct sockaddr_storage
+ */
 IpAddress::IpAddress(const struct sockaddr_storage & addr) : mpAddr(0)
 {
     update_address(addr);
@@ -50,6 +68,21 @@ IpAddress::IpAddress(const struct sockaddr_storage & addr) : mpAddr(0)
 
 
 /******************************************************************************/
+/**
+ * Construct an IP address based on the IP address in the struct sockaddr *
+ */
+IpAddress::IpAddress(const struct sockaddr * addr) : mpAddr(0)
+{
+    update_address(reinterpret_cast<const struct sockaddr_storage &>(*addr));
+}
+
+
+
+/******************************************************************************/
+/**
+ * Return instance of a Any Address, used for creating listening sockets
+ * on both Ipv6 and Ipv4
+ */
 const IpAddress & IpAddress::AnyAddress()
 {
     static IpAddress * addr = 0;
@@ -62,6 +95,10 @@ const IpAddress & IpAddress::AnyAddress()
 
 
 /******************************************************************************/
+/**
+ * Return instance of a Any Ipv6 Address, used for creating listening sockets
+ * on Ipv6
+ */
 const IpAddress & IpAddress::AnyIpv6Address()
 {
     static IpAddress addr(in6addr_any);
@@ -70,6 +107,10 @@ const IpAddress & IpAddress::AnyIpv6Address()
 
 
 /******************************************************************************/
+/**
+ * Return instance of a Any Ipv4 Address, used for creating listening sockets
+ * on Ipv6
+ */
 const IpAddress & IpAddress::AnyIpv4Address()
 {
     static IpAddress addr(INADDR_ANY);
@@ -78,6 +119,9 @@ const IpAddress & IpAddress::AnyIpv4Address()
 
 
 /******************************************************************************/
+/**
+ * Return instance of a No Address
+ */
 const IpAddress & IpAddress::NoAddress()
 {
     static IpAddress addr;
@@ -93,32 +137,20 @@ IpAddress::~IpAddress()
 
 
 /******************************************************************************/
-bool IpAddress::is_ipv4() const
+bool IpAddress::is_version(IpVersion_t ver) const
 {
-    return mpAddr ? (mpAddr->ver == IPv4) : false;
+    return mpAddr ? (mpAddr->ver == ver) : false;
 }
 
 
 /******************************************************************************/
-bool IpAddress::is_ipv6() const
-{
-    return mpAddr ? (mpAddr->ver == IPv6) : false;
-}
-
-
-/******************************************************************************/
-bool IpAddress::is_any() const
-{
-    return mpAddr ? (mpAddr->ver == ANY) : false;
-}
-
-/******************************************************************************/
-IpAddress::operator unsigned int() const
+RawIpv4_t IpAddress::get_raw_ipv4() const
 {
     if(is_ipv4()) {
         return mpAddr->v4Addr;
     }
-    throw "Cannot convert IP Address to an Int";
+    LOG_ERROR("Cannot convert IP Address to an Int");
+    throw 1;
 }
 
 
@@ -128,13 +160,14 @@ IpAddress::operator struct in6_addr &() const
     if(is_ipv6()) {
         return reinterpret_cast<struct in6_addr &>(mpAddr->v6Addr);
     }
-    throw "Cannot convert IP Address to an Int";
+    LOG_ERROR("Cannot convert IP Address to an Int");
+    throw 2;
 }
 
 
 
 /******************************************************************************/
-IpAddress & IpAddress::operator=(unsigned int ipv4Addr)
+IpAddress & IpAddress::operator=(RawIpv4_t ipv4Addr)
 {
     update_ipv4_address(ipv4Addr);
     return *this;
@@ -161,6 +194,34 @@ IpAddress & IpAddress::operator=(const struct in_addr & ipv4Addr)
     update_ipv4_address(ipv4Addr);
     return *this;
 }
+
+
+/******************************************************************************/
+bool IpAddress::operator==(const IpAddress & other) const
+{
+    if(mpAddr == other.mpAddr) {
+	return true;
+    }
+    if(mpAddr && other.mpAddr) {
+	if(mpAddr->ver == other.mpAddr->ver) {
+	    if(mpAddr->ver == other.mpAddr->ver) {
+		switch(mpAddr->ver) {
+		    case ANY:
+		    default:
+		        return true;
+
+		    case IPv4:
+			return mpAddr->v4Addr == other.mpAddr->v4Addr;
+
+		    case IPv6:
+			return memcmp(mpAddr->v6Addr, other.mpAddr->v6Addr, sizeof(RawIpv6_t)) == 0;
+		}
+	    }
+	}
+    }
+    return false;
+}
+
 
 
 /******************************************************************************/
@@ -229,7 +290,7 @@ void IpAddress::update_ipv6_address(const RawIpv6_t ipv6Address)
 	    memcpy(mpAddr->v6Addr, ipv6Address, sizeof(mpAddr->v6Addr));
 	} else {
 	    remove_address();
-	}	
+	}
     }
     if(!mpAddr) {
         mpAddr = new Address;
@@ -247,7 +308,7 @@ void IpAddress::update_address(const struct sockaddr_storage & addr)
 	       	= reinterpret_cast<const struct sockaddr_in *>(&addr);
 	update_ipv4_address(pAddr->sin_addr);
     } else if(addr.ss_family == AF_INET6) {
-	const struct sockaddr_in6 * pAddr 
+	const struct sockaddr_in6 * pAddr
 		= reinterpret_cast<const struct sockaddr_in6 *>(&addr);
 	update_ipv6_address(pAddr->sin6_addr);
     }

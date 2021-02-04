@@ -6,11 +6,11 @@
 #include "capture.h"
 
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
 RtpConnection::RtpConnection(unsigned char payloadType)
 {
     LOG_DEBUG("RtpConnection");
-    
+
 //    mSource = new Capture();
 //    mSource.init();
 
@@ -19,9 +19,9 @@ RtpConnection::RtpConnection(unsigned char payloadType)
 
     mPacket = new Byte[MAX_PKT_SIZE];
 
- 
+
     // First byte is version, P, X, CC
-    mPacket[0] = (RTP_VERSION << 6) | (RTP_PADDING << 5) | (RTP_EXTENSION << 4) 
+    mPacket[0] = (RTP_VERSION << 6) | (RTP_PADDING << 5) | (RTP_EXTENSION << 4)
 	    | (RTP_CSRC_COUNT);
     mPacket[1] = payloadType;
     // SSRC
@@ -29,7 +29,7 @@ RtpConnection::RtpConnection(unsigned char payloadType)
 }
 
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
 RtpConnection::~RtpConnection()
 {
     if(mPacket) {
@@ -39,14 +39,14 @@ RtpConnection::~RtpConnection()
 }
 
 
-/*----------------------------------------------------------------------------*/
-bool RtpConnection::parse_recv(const Byte * pData, unsigned len)
+/******************************************************************************/
+bool RtpConnection::parse_recv(const Byte * /*pData*/, unsigned /*len*/)
 {
     return true;
 }
 
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
 void RtpConnection::send_packet(unsigned num_to_send, unsigned timeDuration)
 {
     ++mSequenceNumber;

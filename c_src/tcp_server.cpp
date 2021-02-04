@@ -9,14 +9,20 @@
 #include "tcp_connection.h"
 
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
+/**
+ * Construct a TCP server
+ */
 TcpServer::TcpServer() : Network(1), mSock(-1), mAltSock(-1)
 {
     LOG_DEBUG("TcpServer");
 }
 
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
+/**
+ * Deconstruct a TCP server
+ */
 TcpServer::~TcpServer()
 {
     LOG_DEBUG("~TcpServer");
@@ -33,19 +39,22 @@ TcpServer::~TcpServer()
 }
 
 
-/*----------------------------------------------------------------------------*/
-bool TcpServer::init(unsigned short port, const IpAddress & addr) 
+/******************************************************************************/
+/**
+ * Create a listening socket
+ */
+bool TcpServer::init(unsigned short localPort, const IpAddress & localAddr)
 {
     int sock = -1;
     int alt_sock = -1;
 
-    if(addr.is_ipv4()) {
-    	sock = create_ipv4_socket(port, addr);
-    } else if (addr.is_ipv6()) {
-    	sock = create_ipv6_socket(port, addr);
-    } else if (addr.is_any()) {
-    	sock = create_ipv4_socket(port, IpAddress::AnyIpv4Address());
-    	alt_sock = create_ipv6_socket(port, IpAddress::AnyIpv6Address());
+    if(localAddr.is_ipv4()) {
+    	sock = create_ipv4_socket(localPort, localAddr.get_raw_ipv4());
+    } else if (localAddr.is_ipv6()) {
+    	sock = create_ipv6_socket(localPort, localAddr);
+    } else if (localAddr.is_any()) {
+    	sock = create_ipv4_socket(localPort, IpAddress::AnyIpv4Address().get_raw_ipv4());
+    	alt_sock = create_ipv6_socket(localPort, IpAddress::AnyIpv6Address());
 	if(sock < 0) {
 	    sock = alt_sock;
 	    alt_sock = -1;
@@ -66,38 +75,37 @@ bool TcpServer::init(unsigned short port, const IpAddress & addr)
     }
     mSock = sock;
     mAltSock = alt_sock;
-    mListeningPort = port;
+    mListeningPort = localPort;
     return true;
 }
 
 
 /*----------------------------------------------------------------------------*/
-int TcpServer::create_ipv4_socket(uint16_t port, uint32_t address)
+int TcpServer::create_ipv4_socket(uint16_t localPort, uint32_t localAddress)
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
 
     if(sock < 0) {
-        LOG_ERRNO_AS_ERROR("Failed to open TCPv6 socket");
+        LOG_ERRNO_AS_ERROR("Failed to open TCPv4 socket");
 	return -1;
     }
 
-    int on = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void *)&on, sizeof(on));
+    setsockopt_reuseaddr(sock);
 
     socklen_t len = 0;
     struct sockaddr_in addr;
 
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(address);
+    addr.sin_port = htons(localPort);
+    addr.sin_addr.s_addr = htonl(localAddress);
     len = sizeof(addr);
 
-    return bind_and_listen(sock, port, reinterpret_cast<const struct sockaddr *>(&addr), len);
+    return bind_and_listen(sock, localPort, reinterpret_cast<const struct sockaddr *>(&addr), len);
 }
 
 
 /*----------------------------------------------------------------------------*/
-int TcpServer::create_ipv6_socket(uint16_t port, const struct in6_addr & address)
+int TcpServer::create_ipv6_socket(uint16_t localPort, const struct in6_addr & localAddress)
 {
     int sock = socket(AF_INET6, SOCK_STREAM, 0);
 
@@ -106,40 +114,34 @@ int TcpServer::create_ipv6_socket(uint16_t port, const struct in6_addr & address
 	return -1;
     }
 
-    int on = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void *)&on, sizeof(on));
-
-    on = 1;
-    setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&on, sizeof(on));
+    setsockopt_reuseaddr(sock);
+    setsockopt_ipv6only(sock);
 
     socklen_t len = 0;
     struct sockaddr_in6 addr;
 
     addr.sin6_family = AF_INET6;
-    addr.sin6_port = htons(port);
-    addr.sin6_addr = address;
+    addr.sin6_port = htons(localPort);
+    addr.sin6_addr = localAddress;
     len = sizeof(addr);
 
-    return bind_and_listen(sock, port, reinterpret_cast<const struct sockaddr *>(&addr), len);
+    return bind_and_listen(sock, localPort, reinterpret_cast<const struct sockaddr *>(&addr), len);
 }
 
 
 /*----------------------------------------------------------------------------*/
-int TcpServer::bind_and_listen(int sock, uint16_t port, const sockaddr * pAddr,
-		socklen_t len) 
-{	
-    int status = bind(sock, pAddr, len);
-    if(status != 0) {
-    	LOG_ERRNO_AS_ERROR("Bind to %hu failed", port);
-	close(sock);
-	return -1;
-    }
+int TcpServer::bind_and_listen(int sock, uint16_t localPort, const sockaddr * pAddr,
+		socklen_t len)
+{
+    sock = bind(sock, localPort, pAddr, len);
 
-    status = listen(sock, 5);
-    if(status != 0) {
-    	LOG_ERRNO_AS_ERROR("listen failed");
-	close(sock);
-	return -1;
+    if(sock >= 0) {
+        int status = listen(sock, 5);
+        if(status != 0) {
+    	    LOG_ERRNO_AS_ERROR("listen failed");
+	    close(sock);
+	    return -1;
+        }
    }
    return sock;
 }
@@ -186,19 +188,13 @@ void TcpServer::accept(int sock)
 
     Connection * pConn = create_connection();
     if(pConn) {
-    	struct sockaddr_storage server;
 
 	if(!pConn->attach(connfd, *this, clientAddr, port)) {
             LOG_ERROR("Failed to attach connection");
 	    delete pConn;
         }
-    	socklen_t len = sizeof(server);
-    	if(0 == getsockname(connfd, reinterpret_cast<struct sockaddr *>(&server)
-		, &len)) {
-	   mHostIp = IpAddress(server);
-	}
     } else {
 	::close(connfd);
-    }	
+    }
 }
 

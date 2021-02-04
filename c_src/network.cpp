@@ -1,12 +1,14 @@
 #include <unistd.h>
 #include <string.h>
+#include <sys/socket.h>
 
 #include "network.h"
 #include "logging.h"
 #include "event_loop.h"
 #include "connection.h"
 
-/*----------------------------------------------------------------------------*/
+
+/******************************************************************************/
 Network::Network(unsigned maxNumOfConns): mMaxNumOfConns(maxNumOfConns),
 	mpConnectionFactory(0), mpFactoryArg(0)
 {
@@ -18,7 +20,7 @@ Network::Network(unsigned maxNumOfConns): mMaxNumOfConns(maxNumOfConns),
 }
 
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
 Network::~Network()
 {
     LOG_DEBUG("~Network");
@@ -26,7 +28,7 @@ Network::~Network()
 }
 
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
 void Network::delete_connections()
 {
     for(unsigned i = 0; i < mMaxNumOfConns; i++) {
@@ -39,12 +41,12 @@ void Network::delete_connections()
 }
 
 
-/*----------------------------------------------------------------------------*/
-Connection * Network::create_connection() 
+/******************************************************************************/
+Connection * Network::create_connection()
 {
     Connection * pConn = 0;
 
-    if(!mpConnectionFactory) {	
+    if(!mpConnectionFactory) {
         LOG_ERROR("No registered Connection factory");
 	return 0;
     }
@@ -63,7 +65,7 @@ Connection * Network::create_connection()
 }
 
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
 void Network::register_connection_factory(ConnectionFactory pFunc, void * pArg)
 {
     mpConnectionFactory = pFunc;
@@ -71,7 +73,7 @@ void Network::register_connection_factory(ConnectionFactory pFunc, void * pArg)
 }
 
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
 void Network::detach_connection(int sock, Connection * pConn)
 {
     LOG_INFO("remove_connection");
@@ -85,25 +87,31 @@ void Network::detach_connection(int sock, Connection * pConn)
 }
 
 
-/*----------------------------------------------------------------------------*/
-const char * Network::get_hostname() const
+/******************************************************************************/
+int Network::bind(int sock, uint16_t port, const sockaddr * pAddr,
+		socklen_t len)
 {
-    static char buf[64];
-    static bool got_name = false;
-
-    if(!got_name) {
-	if(0 == gethostname(buf, sizeof(buf))) {
-	    const unsigned len = strlen(buf);
-	    buf[len] = '.';
-	    if(0 != getdomainname(&buf[len+1], sizeof(buf) - len - 1)) {
-		buf[len] = '\0';
-	    }
-	    got_name = true;	
-	} else {
-	    LOG_ERRNO_AS_ERROR("Failed to get domain name");
-	    buf[0] = '\0';
-        }
+    int status = ::bind(sock, pAddr, len);
+    if(status != 0) {
+    	LOG_ERRNO_AS_ERROR("Bind to %hu failed", port);
+	::close(sock);
+	return -1;
     }
-    return buf;
-}    
+    return sock;
+}
 
+
+/******************************************************************************/
+void Network::setsockopt_ipv6only(int sock)
+{
+    int on = 1;
+    ::setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&on, sizeof(on));
+}
+
+
+/******************************************************************************/
+void Network::setsockopt_reuseaddr(int sock)
+{
+    int on = 1;
+    ::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void *)&on, sizeof(on));
+}

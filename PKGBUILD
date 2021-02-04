@@ -7,7 +7,7 @@ arch=('any')
 url="http:"
 license=('GPL')
 makedepends=('python')
-depends=('systemd')
+depends=('systemd', 'opus')
 source=()
 install='sound_relay.install'
 

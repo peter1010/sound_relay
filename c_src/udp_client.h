@@ -17,11 +17,13 @@ public:
     const IpAddress & get_hostip() const { return IpAddress::NoAddress(); };
 
 protected:
-    bool init(unsigned short port, const IpAddress & addr, 
-		    unsigned short localPort,
-		    const IpAddress & localAddr);
+    bool init(uint16_t, const IpAddress &, uint16_t, const IpAddress &);
     
-    bool init(unsigned short port, const IpAddress & addr);
+    bool init(uint16_t, const IpAddress &);
+
+    static int create_ipv4_socket(uint16_t, uint32_t);
+
+    static int create_ipv6_socket(uint16_t, const struct in6_addr &);
 
 private:
     

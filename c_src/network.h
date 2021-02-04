@@ -1,6 +1,9 @@
 #ifndef _NETWORK_H_
 #define _NETWORK_H_
 
+#include <stdint.h>
+#include <sys/socket.h>
+
 class IpAddress;
 class Connection;
 
@@ -26,6 +29,11 @@ protected:
 
     void delete_connections();
     Connection * create_connection();
+
+    static int bind(int sock, uint16_t port, const sockaddr * pAddr, socklen_t len);
+
+    static void setsockopt_ipv6only(int);
+    static void setsockopt_reuseaddr(int);
 
 private:
 
