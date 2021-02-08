@@ -26,7 +26,7 @@ protected:
 
     static int create_ipv4_socket(uint16_t, uint32_t);
 
-    static int create_ipv6_socket(uint16_t, const struct in6_addr &);
+    static int create_ipv6_socket(uint16_t, const struct in6_addr &, unsigned);
 
     static int bind_and_listen(int, uint16_t, const sockaddr *,	socklen_t);
 

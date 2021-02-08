@@ -1,6 +1,7 @@
 
 #include <arpa/inet.h>
 #include <string.h>
+#include <net/if.h>
 
 #include "ip_address.h"
 #include "logging.h"
@@ -38,9 +39,16 @@ IpAddress::IpAddress(const struct in_addr & ipv4Addr) : mpAddr(0)
 /** 
  * Construct an Ipv6 address based on the contents of struct in6_addr
  */
-IpAddress::IpAddress(const struct in6_addr & ipv6Addr) : mpAddr(0)
+IpAddress::IpAddress(const struct in6_addr & ipv6Addr, const char * intf) : mpAddr(0)
 {
-    update_ipv6_address(ipv6Addr);
+    unsigned scopeId = 0;
+    if(intf) {
+    	scopeId = if_nametoindex(intf);
+	if(scopeId == 0) {
+	    LOG_ERRNO_AS_ERROR("Failed to calculate IPv6 scope ID");
+        }
+    }
+    update_ipv6_address(ipv6Addr, scopeId);
 }
 
 
@@ -227,7 +235,7 @@ bool IpAddress::operator==(const IpAddress & other) const
 /******************************************************************************/
 const char * IpAddress::c_str() const
 {
-    static char buf[INET6_ADDRSTRLEN];
+    static char buf[INET6_ADDRSTRLEN + IF_NAMESIZE + 1];
     if(is_ipv4()) {
         struct in_addr addr;
         addr.s_addr = htonl(mpAddr->v4Addr);
@@ -238,6 +246,11 @@ const char * IpAddress::c_str() const
         inet_ntop(AF_INET6, &addr, buf, sizeof(buf));
     } else {
 	return "Not an IP Address";
+    }
+    if (mpAddr->scopeId != 0) {
+	unsigned idx = strlen(buf);
+	buf[idx] = '@';
+	if_indextoname(mpAddr->scopeId, &buf[idx+1]);
     }
     return buf;
 }
@@ -270,6 +283,7 @@ void IpAddress::update_ipv4_address(RawIpv4_t ipv4Address)
 	mpAddr = new Address;
 	mpAddr->ver = IPv4;
 	mpAddr->v4Addr = ipv4Address;
+	mpAddr->scopeId = 0;
     }
 }
 
@@ -282,12 +296,13 @@ void IpAddress::update_ipv4_address(const struct in_addr & addr)
 
 
 /******************************************************************************/
-void IpAddress::update_ipv6_address(const RawIpv6_t ipv6Address)
+void IpAddress::update_ipv6_address(const RawIpv6_t ipv6Address, unsigned scope_id)
 {
     if(mpAddr) {
 	if(mpAddr->refCnt == 1) {
 	    mpAddr->ver = IPv6;
 	    memcpy(mpAddr->v6Addr, ipv6Address, sizeof(mpAddr->v6Addr));
+	    mpAddr->scopeId = scope_id;
 	} else {
 	    remove_address();
 	}
@@ -296,6 +311,11 @@ void IpAddress::update_ipv6_address(const RawIpv6_t ipv6Address)
         mpAddr = new Address;
         mpAddr->ver = IPv6;
 	memcpy(mpAddr->v6Addr, ipv6Address, sizeof(mpAddr->v6Addr));
+ 	mpAddr->scopeId = scope_id;;
+    }
+    
+    if((mpAddr->v6Addr[0] == 0xFE) && (mpAddr->v6Addr[1] == 0x80) && (mpAddr->scopeId == 0)) {
+	LOG_ERROR("Ipv6 has invalid scope ID");
     }
 }
 
@@ -310,7 +330,13 @@ void IpAddress::update_address(const struct sockaddr_storage & addr)
     } else if(addr.ss_family == AF_INET6) {
 	const struct sockaddr_in6 * pAddr
 		= reinterpret_cast<const struct sockaddr_in6 *>(&addr);
-	update_ipv6_address(pAddr->sin6_addr);
+	update_ipv6_address(pAddr->sin6_addr, pAddr->sin6_scope_id);
     }
 }
 
+
+/******************************************************************************/
+unsigned IpAddress::get_scope_id() const
+{
+    return mpAddr ? mpAddr->scopeId : 0;
+}

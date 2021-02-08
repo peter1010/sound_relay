@@ -385,8 +385,13 @@ std::string RtspConnection::generate_setup_response()
     std::string pathname = extract_path(mUrl);
     Session * pSession = Media::get_session(pathname.c_str());
 
-    pSession->set_our_address(get_hostip(IPv4));
-    pSession->add_peer_address(get_peer_address());
+    IpAddress peerAddress = get_peer_address();
+    if(peerAddress.is_ipv4()) {
+        pSession->set_our_address(get_hostip(IPv4));
+    } else {
+        pSession->set_our_address(get_hostip(IPv6));
+    }
+    pSession->add_peer_address(peerAddress);
 
     // Mandatory fields:
     // CSeq:

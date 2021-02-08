@@ -14,7 +14,7 @@ public:
     IpAddress();
     IpAddress(const IpAddress &);
     IpAddress(const struct in_addr &);
-    IpAddress(const struct in6_addr &);
+    IpAddress(const struct in6_addr &, const char * intf = 0);
     IpAddress(const struct sockaddr_storage &);
     IpAddress(const struct sockaddr *);
 
@@ -38,6 +38,7 @@ public:
     bool is_ipv6() const { return is_version(IPv6); };
     bool is_ipv4() const { return is_version(IPv4); };
     bool is_any() const { return is_version(ANY); };
+    bool is_none() const { return mpAddr == 0; };
 
     static const IpAddress & AnyAddress();
 
@@ -47,19 +48,21 @@ public:
 
     static const IpAddress & NoAddress();
 
+    unsigned get_scope_id() const;
+
 protected:
     void update_ipv4_address(RawIpv4_t);
 
     void update_ipv4_address(const struct in_addr &);
 
-    void update_ipv6_address(const RawIpv6_t);
+    void update_ipv6_address(const RawIpv6_t, unsigned scope_id);
 
-    inline void update_ipv6_address(const struct in6_addr & addr)
+    inline void update_ipv6_address(const struct in6_addr & addr, unsigned scope_id)
     {
-    	update_ipv6_address(reinterpret_cast<const uint8_t *>(&addr));
+    	update_ipv6_address(reinterpret_cast<const uint8_t *>(&addr), scope_id);
     };
 
-    void update_address(const struct sockaddr_storage & addr);
+    void update_address(const struct sockaddr_storage &);
 
     void remove_address();
 
@@ -71,6 +74,7 @@ private:
 	    RawIpv6_t v6Addr;
 	};
 	IpVersion_t ver;
+	unsigned scopeId;
 	int refCnt;
 
 	Address() : ver(ANY), refCnt(1) {};

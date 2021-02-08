@@ -51,16 +51,17 @@ bool TcpServer::init(unsigned short localPort, const IpAddress & localAddr)
     if(localAddr.is_ipv4()) {
     	sock = create_ipv4_socket(localPort, localAddr.get_raw_ipv4());
     } else if (localAddr.is_ipv6()) {
-    	sock = create_ipv6_socket(localPort, localAddr);
+    	sock = create_ipv6_socket(localPort, localAddr, localAddr.get_scope_id());
     } else if (localAddr.is_any()) {
     	sock = create_ipv4_socket(localPort, IpAddress::AnyIpv4Address().get_raw_ipv4());
-    	alt_sock = create_ipv6_socket(localPort, IpAddress::AnyIpv6Address());
+    	alt_sock = create_ipv6_socket(localPort, IpAddress::AnyIpv6Address(), 0);
 	if(sock < 0) {
 	    sock = alt_sock;
 	    alt_sock = -1;
 	}
     } else {
-	LOG_ERROR("No IP address");
+        LOG_DEBUG("Local %s @ %u", localAddr.c_str(), localPort);
+	LOG_ERROR("TCP socket cannot be created, no valid IP address");
 	return false;
     }
 
@@ -80,7 +81,7 @@ bool TcpServer::init(unsigned short localPort, const IpAddress & localAddr)
 }
 
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
 int TcpServer::create_ipv4_socket(uint16_t localPort, uint32_t localAddress)
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -104,8 +105,8 @@ int TcpServer::create_ipv4_socket(uint16_t localPort, uint32_t localAddress)
 }
 
 
-/*----------------------------------------------------------------------------*/
-int TcpServer::create_ipv6_socket(uint16_t localPort, const struct in6_addr & localAddress)
+/******************************************************************************/
+int TcpServer::create_ipv6_socket(uint16_t localPort, const struct in6_addr & localAddress, unsigned scope_id)
 {
     int sock = socket(AF_INET6, SOCK_STREAM, 0);
 
@@ -123,6 +124,8 @@ int TcpServer::create_ipv6_socket(uint16_t localPort, const struct in6_addr & lo
     addr.sin6_family = AF_INET6;
     addr.sin6_port = htons(localPort);
     addr.sin6_addr = localAddress;
+    addr.sin6_flowinfo = 0;
+    addr.sin6_scope_id = scope_id;
     len = sizeof(addr);
 
     return bind_and_listen(sock, localPort, reinterpret_cast<const struct sockaddr *>(&addr), len);
