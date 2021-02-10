@@ -153,7 +153,8 @@ int UdpClient::create_ipv4_socket(uint16_t localPort, uint32_t localAddress)
     addr.sin_addr.s_addr = htonl(localAddress);
     len = sizeof(addr);
 
-    return bind(sock, localPort, reinterpret_cast<const struct sockaddr *>(&addr), len);
+    bind(sock, localPort, reinterpret_cast<const struct sockaddr *>(&addr), len);
+    return sock;
 }
 
 
@@ -180,7 +181,8 @@ int UdpClient::create_ipv6_socket(uint16_t localPort,
     addr.sin6_scope_id = scope_id;
     len = sizeof(addr);
 
-    return bind(sock, localPort, reinterpret_cast<const struct sockaddr *>(&addr), len);
+    bind(sock, localPort, reinterpret_cast<const struct sockaddr *>(&addr), len);
+    return sock;
 }
 
 

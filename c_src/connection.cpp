@@ -65,11 +65,13 @@ IpAddress Connection::get_hostip(IpVersion_t ver) const
 		    continue;
 		}
 		if(ifa->ifa_addr != NULL) {
-		    IpAddress tmpAddr = IpAddress(ifa->ifa_addr);
-		    if (tmpAddr == srvAddr) {
-			intf = ifa->ifa_name;
-			LOG_INFO("Interface name is %s", intf);
-		    }
+		    try {
+		        IpAddress tmpAddr = IpAddress(ifa->ifa_addr);
+		        if (tmpAddr == srvAddr) {
+			    intf = ifa->ifa_name;
+			    LOG_INFO("Interface name is %s", intf);
+			}
+		    } catch (IpAddressException e) {}
 		}
 	    }
 	    for(struct ifaddrs * ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
@@ -78,15 +80,17 @@ IpAddress Connection::get_hostip(IpVersion_t ver) const
 		}
 		if(ifa->ifa_addr != NULL) {
 		    if (strcmp(ifa->ifa_name, intf) == 0) {
-			IpAddress tmpAddr = IpAddress(ifa->ifa_addr);
-			if ((ver == IPv4) && tmpAddr.is_ipv4()) {
-	                    srvAddr = tmpAddr;
-			    break;
-			}
-	                if ((ver == IPv6) && tmpAddr.is_ipv6()) {
-	    		    srvAddr = tmpAddr;
-			    break;
-	                }
+		        try {
+			    IpAddress tmpAddr = IpAddress(ifa->ifa_addr);
+   			    if ((ver == IPv4) && tmpAddr.is_ipv4()) {
+	                        srvAddr = tmpAddr;
+			        break;
+			    }
+	                    if ((ver == IPv6) && tmpAddr.is_ipv6()) {
+	    		        srvAddr = tmpAddr;
+			        break;
+	                    }   
+		        } catch (IpAddressException e) {}
 		    }
 		}
 	    }

@@ -7,6 +7,15 @@
 typedef uint32_t RawIpv4_t;
 typedef uint8_t RawIpv6_t[16];
 
+class IpAddressException
+{
+public:
+     IpAddressException(const char *, bool useErrno = false);
+     ~IpAddressException();
+private:
+};
+
+
 class IpAddress
 {
 public:

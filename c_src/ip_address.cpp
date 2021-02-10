@@ -6,6 +6,24 @@
 #include "ip_address.h"
 #include "logging.h"
 
+
+/******************************************************************************/
+IpAddressException::IpAddressException(const char * msg, bool useErrno)
+{
+    if(useErrno) {
+	LOG_ERRNO_AS_ERROR(msg);
+    } else {
+	LOG_ERROR(msg);
+    }
+}
+
+
+/******************************************************************************/
+IpAddressException::~IpAddressException()
+{
+}
+
+
 /******************************************************************************/
 /**
  * Construct a empty (null) address
@@ -45,8 +63,8 @@ IpAddress::IpAddress(const struct in6_addr & ipv6Addr, const char * intf) : mpAd
     if(intf) {
     	scopeId = if_nametoindex(intf);
 	if(scopeId == 0) {
-	    LOG_ERRNO_AS_ERROR("Failed to calculate IPv6 scope ID");
-        }
+	    throw IpAddressException("Failed to calculate IPv6 scope ID", true);
+	}
     }
     update_ipv6_address(ipv6Addr, scopeId);
 }
@@ -157,8 +175,7 @@ RawIpv4_t IpAddress::get_raw_ipv4() const
     if(is_ipv4()) {
         return mpAddr->v4Addr;
     }
-    LOG_ERROR("Cannot convert IP Address to an Int");
-    throw 1;
+    throw IpAddressException("Cannot convert IP Address to an Int");
 }
 
 
@@ -168,8 +185,7 @@ IpAddress::operator struct in6_addr &() const
     if(is_ipv6()) {
         return reinterpret_cast<struct in6_addr &>(mpAddr->v6Addr);
     }
-    LOG_ERROR("Cannot convert IP Address to an Int");
-    throw 2;
+    throw IpAddressException("Cannot convert IP Address to an Int");
 }
 
 
@@ -298,6 +314,10 @@ void IpAddress::update_ipv4_address(const struct in_addr & addr)
 /******************************************************************************/
 void IpAddress::update_ipv6_address(const RawIpv6_t ipv6Address, unsigned scope_id)
 {
+    if((ipv6Address[0] == 0xFE) && (ipv6Address[1] == 0x80) && (scope_id == 0)) {
+	throw IpAddressException("Ipv6 has invalid scope ID");
+    }
+
     if(mpAddr) {
 	if(mpAddr->refCnt == 1) {
 	    mpAddr->ver = IPv6;
@@ -314,9 +334,6 @@ void IpAddress::update_ipv6_address(const RawIpv6_t ipv6Address, unsigned scope_
  	mpAddr->scopeId = scope_id;;
     }
     
-    if((mpAddr->v6Addr[0] == 0xFE) && (mpAddr->v6Addr[1] == 0x80) && (mpAddr->scopeId == 0)) {
-	LOG_ERROR("Ipv6 has invalid scope ID");
-    }
 }
 
 
@@ -331,6 +348,9 @@ void IpAddress::update_address(const struct sockaddr_storage & addr)
 	const struct sockaddr_in6 * pAddr
 		= reinterpret_cast<const struct sockaddr_in6 *>(&addr);
 	update_ipv6_address(pAddr->sin6_addr, pAddr->sin6_scope_id);
+    } else {
+	LOG_ERROR("Family = %i", addr.ss_family);
+	throw IpAddressException("Unsupported socket family");
     }
 }
 

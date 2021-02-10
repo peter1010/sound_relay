@@ -9,7 +9,29 @@ class Connection;
 
 typedef Connection * (* ConnectionFactory)(void * pArg);
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
+class SocketException 
+{
+public:
+    SocketException(int, bool, const char * fmt, ...) __attribute__((format (printf, 4, 5)));
+    ~SocketException();
+private:
+    int mSock;
+};
+
+
+/******************************************************************************/
+class NetworkException 
+{
+public:
+    NetworkException(const char * msg);
+    ~NetworkException();
+private:
+};
+
+
+
+/******************************************************************************/
 class Network
 {
 public:
@@ -30,8 +52,7 @@ protected:
     void delete_connections();
     Connection * create_connection();
 
-    static int bind(int sock, uint16_t port, const sockaddr * pAddr, socklen_t len);
-
+    static void bind(int sock, uint16_t port, const sockaddr * pAddr, socklen_t len);
     static void setsockopt_ipv6only(int);
     static void setsockopt_reuseaddr(int);
 

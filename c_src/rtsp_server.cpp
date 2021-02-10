@@ -12,7 +12,9 @@ RtspServer::RtspServer()
     register_connection_factory(RtspServer::connection_factory, this);
 
     // Start with port 554
-    if(!init(554, IpAddress::AnyAddress())) {
+    try {
+        init(554, IpAddress::AnyAddress());
+    } catch (SocketException e) {
 	init(8554, IpAddress::AnyAddress());
     }
 }

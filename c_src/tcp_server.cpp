@@ -136,17 +136,15 @@ int TcpServer::create_ipv6_socket(uint16_t localPort, const struct in6_addr & lo
 int TcpServer::bind_and_listen(int sock, uint16_t localPort, const sockaddr * pAddr,
 		socklen_t len)
 {
-    sock = bind(sock, localPort, pAddr, len);
+    bind(sock, localPort, pAddr, len);
 
-    if(sock >= 0) {
-        int status = listen(sock, 5);
-        if(status != 0) {
-    	    LOG_ERRNO_AS_ERROR("listen failed");
-	    close(sock);
-	    return -1;
-        }
-   }
-   return sock;
+    int status = listen(sock, 5);
+    if(status != 0) {
+        LOG_ERRNO_AS_ERROR("listen failed");
+	close(sock);
+	return -1;
+    }
+    return sock;
 }
 
 

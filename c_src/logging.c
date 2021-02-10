@@ -35,6 +35,7 @@ static void log_init(void)
 }
 
 
+/******************************************************************************/
 /**
  * Set logging level
  *
@@ -46,6 +47,7 @@ void set_logging_level(unsigned level)
 }
 
 
+/******************************************************************************/
 /**
  * Open the logger, called before each log call, it also tests if we want to
  * log. If logging, then the initial message prefix is sent.
@@ -69,6 +71,7 @@ void * lock_logger(unsigned level)
 }
 
 
+/******************************************************************************/
 /**
  * Log a message
  *
@@ -95,6 +98,30 @@ void log_msg(void * hnd, const char * fmt, ...)
 }
 
 
+/******************************************************************************/
+/**
+ * Log a message
+ *
+ * @param[in] hnd The handle to the logger
+ * @param[in] fmt The format string in the style of printf
+ * @param[in] args Variable args
+ */
+void vlog_msg(void * hnd, const char * fmt, va_list ap)
+{
+    Logger_t * info = (Logger_t *)hnd;
+
+#ifdef LOG_TIMESTAMP
+    fprintf(log_out, "%u.%03li ",
+        (unsigned)info->ts.tv_sec,
+        info->ts.tv_nsec/1000000
+    );
+#endif
+    vfprintf(log_out, fmt, ap);
+    fputs("\n", log_out);
+}
+
+
+/******************************************************************************/
 /**
  * Log a message with errno included
  *
@@ -120,5 +147,30 @@ void log_errno(void * hnd, const char * fmt, ...)
     fputs("\n", log_out);
 
     va_end(ap);
+}
+
+
+/******************************************************************************/
+/**
+ * Log a message with errno included
+ *
+ * @param[in] hnd The handle to the logger
+ * @param[in] fmt The format string in the style of printf
+ * @param[in] args Variable args
+ */
+void vlog_errno(void * hnd, const char * fmt, va_list ap)
+{
+    Logger_t * info = (Logger_t *)hnd;
+
+#ifdef LOG_TIMESTAMP
+    fprintf(log_out, "%u.%03li ",
+        (unsigned)info->ts.tv_sec,
+        info->ts.tv_nsec/1000000
+    );
+#endif
+    vfprintf(log_out, fmt, ap);
+    fputs(":", log_out);
+    fputs(strerror(errno), log_out);
+    fputs("\n", log_out);
 }
 
