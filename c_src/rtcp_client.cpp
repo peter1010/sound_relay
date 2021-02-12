@@ -20,10 +20,8 @@ RtcpClient::RtcpClient(const Session & session)
     register_connection_factory(RtcpClient::connection_factory, this);
 
     // Note init will call RtpClient::connection_factory!
-    if(!init(session.get_peer_rtcp_port(), session.get_peer_address(),
-		    session.get_our_rtcp_port(), session.get_our_address())) {
-        LOG_ERROR("Failed to initialise RTCP Client");
-    }
+    init(session.get_peer_rtcp_port(), session.get_peer_address(),
+		    session.get_our_rtcp_port(), session.get_our_address());
 }
 
 

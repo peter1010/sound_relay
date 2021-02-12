@@ -16,7 +16,7 @@ Connection::Connection() :  mpRecvBuf(NULL)
 
 
 /******************************************************************************/
-bool Connection::attach(int sock, Network & network,
+void Connection::attach(int sock, Network & network,
 		const IpAddress & peerAddress, unsigned short /*peerPort*/)
 {
     bool retVal = true;
@@ -30,12 +30,11 @@ bool Connection::attach(int sock, Network & network,
     if(mMaxRecvLen > 0) {
 	mpRecvBuf = new unsigned char[mMaxRecvLen];
 
-        retVal = EventLoop::instance().register_read_callback(sock,
+        EventLoop::instance().register_read_callback(sock,
 			Connection::recv, this);
     }
     LOG_INFO("Host IPv4 is %s", get_hostip(IPv4).c_str());
     LOG_INFO("Host IPv6 is %s", get_hostip(IPv6).c_str());
-    return retVal;
 }
 
 

@@ -4,6 +4,49 @@
 #include <poll.h>
 #include <alsa/asoundlib.h>
 
+/******************************************************************************/
+class SoundException 
+{
+public:
+    SoundException(const char * fmt, ...) __attribute__((format (printf, 2, 3)));
+};
+
+
+/******************************************************************************/
+class SndPcmHwParamsT 
+{
+public:
+    SndPcmHwParamsT();
+    ~SndPcmHwParamsT();
+
+    operator snd_pcm_hw_params_t *() const { return ptr; };
+private:
+
+    snd_pcm_hw_params_t * ptr;
+
+    SndPcmHwParamsT(const SndPcmHwParamsT &);
+    SndPcmHwParamsT & operator=(const SndPcmHwParamsT &);
+};
+
+
+/******************************************************************************/
+class SndPcmSwParamsT 
+{
+public:
+    SndPcmSwParamsT();
+    ~SndPcmSwParamsT();
+
+    operator snd_pcm_sw_params_t *() const { return ptr; };
+private:
+
+    snd_pcm_sw_params_t * ptr;
+
+    SndPcmSwParamsT(const SndPcmSwParamsT &);
+    SndPcmSwParamsT & operator=(const SndPcmSwParamsT &);
+};
+
+
+/******************************************************************************/
 class Sound
 {
 public:

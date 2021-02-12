@@ -43,7 +43,7 @@ TcpServer::~TcpServer()
 /**
  * Create a listening socket
  */
-bool TcpServer::init(unsigned short localPort, const IpAddress & localAddr)
+void TcpServer::init(unsigned short localPort, const IpAddress & localAddr)
 {
     int sock = -1;
     int alt_sock = -1;
@@ -53,22 +53,27 @@ bool TcpServer::init(unsigned short localPort, const IpAddress & localAddr)
     } else if (localAddr.is_ipv6()) {
     	sock = create_ipv6_socket(localPort, localAddr, localAddr.get_scope_id());
     } else if (localAddr.is_any()) {
-    	sock = create_ipv4_socket(localPort, IpAddress::AnyIpv4Address().get_raw_ipv4());
-    	alt_sock = create_ipv6_socket(localPort, IpAddress::AnyIpv6Address(), 0);
-	if(sock < 0) {
-	    sock = alt_sock;
+	try {
+    	    sock = create_ipv4_socket(localPort, IpAddress::AnyIpv4Address().get_raw_ipv4());
+	} catch (SocketException e) {
+	    sock = -1;
+	}
+	try {
+    	    alt_sock = create_ipv6_socket(localPort, IpAddress::AnyIpv6Address(), 0);
+	    if(sock < 0) {
+	        sock = alt_sock;
+	        alt_sock = -1;
+	    }
+	} catch (SocketException e) {
 	    alt_sock = -1;
+    	    if(sock < 0) {
+	        throw NetworkException("Cannot create an all listening socket");
+	    }
 	}
     } else {
         LOG_DEBUG("Local %s @ %u", localAddr.c_str(), localPort);
-	LOG_ERROR("TCP socket cannot be created, no valid IP address");
-	return false;
+	throw NetworkException("TCP socket cannot be created, no valid IP address");
     }
-
-    if(sock < 0) {
-	return false;
-    }
-
 
     EventLoop::instance().register_read_callback(sock, TcpServer::accept, this);
     if(alt_sock >= 0) {
@@ -77,7 +82,6 @@ bool TcpServer::init(unsigned short localPort, const IpAddress & localAddr)
     mSock = sock;
     mAltSock = alt_sock;
     mListeningPort = localPort;
-    return true;
 }
 
 
@@ -87,8 +91,7 @@ int TcpServer::create_ipv4_socket(uint16_t localPort, uint32_t localAddress)
     int sock = socket(AF_INET, SOCK_STREAM, 0);
 
     if(sock < 0) {
-        LOG_ERRNO_AS_ERROR("Failed to open TCPv4 socket");
-	return -1;
+	SocketException(sock, true, "Failed to open TCPv4 socket");
     }
 
     setsockopt_reuseaddr(sock);
@@ -101,7 +104,8 @@ int TcpServer::create_ipv4_socket(uint16_t localPort, uint32_t localAddress)
     addr.sin_addr.s_addr = htonl(localAddress);
     len = sizeof(addr);
 
-    return bind_and_listen(sock, localPort, reinterpret_cast<const struct sockaddr *>(&addr), len);
+    bind_and_listen(sock, localPort, reinterpret_cast<const struct sockaddr *>(&addr), len);
+    return sock;
 }
 
 
@@ -111,8 +115,7 @@ int TcpServer::create_ipv6_socket(uint16_t localPort, const struct in6_addr & lo
     int sock = socket(AF_INET6, SOCK_STREAM, 0);
 
     if(sock < 0) {
-        LOG_ERRNO_AS_ERROR("Failed to open TCPv6 socket");
-	return -1;
+	SocketException(sock, true, "Failed to open TCPv6 socket");
     }
 
     setsockopt_reuseaddr(sock);
@@ -128,23 +131,21 @@ int TcpServer::create_ipv6_socket(uint16_t localPort, const struct in6_addr & lo
     addr.sin6_scope_id = scope_id;
     len = sizeof(addr);
 
-    return bind_and_listen(sock, localPort, reinterpret_cast<const struct sockaddr *>(&addr), len);
+    bind_and_listen(sock, localPort, reinterpret_cast<const struct sockaddr *>(&addr), len);
+    return sock;
 }
 
 
 /*----------------------------------------------------------------------------*/
-int TcpServer::bind_and_listen(int sock, uint16_t localPort, const sockaddr * pAddr,
+void TcpServer::bind_and_listen(int sock, uint16_t localPort, const sockaddr * pAddr,
 		socklen_t len)
 {
     bind(sock, localPort, pAddr, len);
 
     int status = listen(sock, 5);
     if(status != 0) {
-        LOG_ERRNO_AS_ERROR("listen failed");
-	close(sock);
-	return -1;
+	throw SocketException(sock, true, "listen failed");
     }
-    return sock;
 }
 
 
@@ -189,11 +190,7 @@ void TcpServer::accept(int sock)
 
     Connection * pConn = create_connection();
     if(pConn) {
-
-	if(!pConn->attach(connfd, *this, clientAddr, port)) {
-            LOG_ERROR("Failed to attach connection");
-	    delete pConn;
-        }
+	pConn->attach(connfd, *this, clientAddr, port);
     } else {
 	::close(connfd);
     }

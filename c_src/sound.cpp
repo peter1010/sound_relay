@@ -10,6 +10,51 @@ snd_output_t * Sound::mStdout = 0;
 
 
 /******************************************************************************/
+SoundException::SoundException(const char * fmt, ...) 
+{
+    va_list ap;
+    va_start(ap, fmt);
+
+    VLOG_ERROR(fmt, ap);
+    va_end(ap);
+}
+
+
+/******************************************************************************/
+SndPcmHwParamsT::SndPcmHwParamsT()
+{
+    int status = snd_pcm_hw_params_malloc(&ptr);
+    if(status < 0) {
+        throw SoundException("snd_pcm_hw_params_malloc() failed => %s", snd_strerror(status));
+    }
+}
+
+
+/******************************************************************************/
+SndPcmHwParamsT::~SndPcmHwParamsT()
+{
+    snd_pcm_hw_params_free(ptr);
+}
+
+
+/******************************************************************************/
+SndPcmSwParamsT::SndPcmSwParamsT()
+{
+    int status = snd_pcm_sw_params_malloc(&ptr);
+    if(status < 0) {
+        throw SoundException("snd_pcm_sw_params_malloc() failed => %s", snd_strerror(status));
+    }
+}
+
+
+/******************************************************************************/
+SndPcmSwParamsT::~SndPcmSwParamsT()
+{
+    snd_pcm_sw_params_free(ptr);
+}
+
+
+/******************************************************************************/
 Sound::Sound() : mPcmHandle(0)
 {
     if(!mStdout) {

@@ -16,6 +16,8 @@ RtspServer::RtspServer()
         init(554, IpAddress::AnyAddress());
     } catch (SocketException e) {
 	init(8554, IpAddress::AnyAddress());
+    } catch (NetworkException e) {
+	init(8554, IpAddress::AnyAddress());
     }
 }
 

@@ -17,7 +17,7 @@ public:
     unsigned short get_listening_port() const { return mListeningPort; };
 
 protected:
-    bool init(unsigned short, const IpAddress &);
+    void init(unsigned short, const IpAddress &);
 
     static void accept(void *);
     static void alt_accept(void *);
@@ -28,7 +28,7 @@ protected:
 
     static int create_ipv6_socket(uint16_t, const struct in6_addr &, unsigned);
 
-    static int bind_and_listen(int, uint16_t, const sockaddr *,	socklen_t);
+    static void bind_and_listen(int, uint16_t, const sockaddr *, socklen_t);
 
 
 private:

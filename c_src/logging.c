@@ -24,6 +24,7 @@ typedef struct Logger_s Logger_t;
 Logger_t log_info;
 
 
+/******************************************************************************/
 /**
  * Initialiser the logger by opening the output stream
  */

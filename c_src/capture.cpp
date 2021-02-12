@@ -11,6 +11,7 @@
 #include "rtp_connection.h"
 
 
+
 /******************************************************************************/
 Capture::Capture() : mpConn(0), mpBuffer(0), mpEncoder(0)
 {
@@ -217,7 +218,6 @@ void Capture::open(const char * alsa_dev)
 /*****************************************************************************/
 void Capture::set_hw_params()
 {
-    snd_pcm_hw_params_t * params;
     snd_pcm_t * handle = mPcmHandle;
 
     if(!handle) {
@@ -225,105 +225,91 @@ void Capture::set_hw_params()
 	return;
     }
 
-    int status = snd_pcm_hw_params_malloc(&params);
+    SndPcmHwParamsT params;
+
+    // Fill in the params structure will full possibilities of the all
+    // configurations for this device
+    int status = snd_pcm_hw_params_any(handle, params);
     if(status < 0) {
-        LOG_ERROR("snd_pcm_hw_params_malloc() failed => %s", snd_strerror(status));
-        return;
+        throw SoundException("snd_pcm_hw_params_any failed:%s", snd_strerror(status));
     }
 
-    do {
-	// Fill in the params structure will full possibilities of the all
-	// configurations for this device
-        status = snd_pcm_hw_params_any(handle, params);
-        if(status < 0) {
-            LOG_ERROR("snd_pcm_hw_params_any failed:%s", snd_strerror(status));
-            break;
-        }
+    // Disable any resampling we want a clean input
+    status = snd_pcm_hw_params_set_rate_resample(handle, params, 0);
+    if(status < 0) {
+	throw SoundException("Failed to disable resampling: %s\n", snd_strerror(status));
+    }
 
-        // Disable any resampling we want a clean input
-        status = snd_pcm_hw_params_set_rate_resample(handle, params, 0);
-        if(status < 0) {
-            LOG_ERROR("Failed to disable resampling: %s\n", snd_strerror(status));
-            break;
-        }
+    // Select the access method
+    test_access(handle, params);
+    // Set Access format
+    status = snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
+    if(status < 0) {
+        throw SoundException("Failed to set access mode: %s\n", snd_strerror(status));
+    }
 
-	// Select the access method
-        test_access(handle, params);
-        // Set Access format
-        status = snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
-        if(status < 0) {
-            LOG_ERROR("Failed to set access mode: %s\n", snd_strerror(status));
-            break;
-        }
-
-      	// Select the format
-        test_formats(handle, params);
-        // Set format
-        snd_pcm_format_t fmt = SND_PCM_FORMAT_S16;
-        status = snd_pcm_hw_params_set_format(handle, params, fmt);
-        if(status < 0) {
-            LOG_ERROR("snd_pcm_hw_params_set_format failed:%s", snd_strerror(status));
-        }
-        else {
-            LOG_INFO("format=%s", snd_pcm_format_name(fmt));
-        }
+    // Select the format
+    test_formats(handle, params);
+    // Set format
+    snd_pcm_format_t fmt = SND_PCM_FORMAT_S16;
+    status = snd_pcm_hw_params_set_format(handle, params, fmt);
+    if(status < 0) {
+        throw SoundException("snd_pcm_hw_params_set_format failed:%s", snd_strerror(status));
+    }
+    LOG_INFO("format=%s", snd_pcm_format_name(fmt));
         
-	// Select number of channels
-        test_channels(params);
-        // Set number of channels
-        status = snd_pcm_hw_params_set_channels(handle, params, 2);
-        if(status < 0) {
-            LOG_ERROR("Failed to set channels: %s\n", snd_strerror(status));
-        }
+    // Select number of channels
+    test_channels(params);
+    // Set number of channels
+    status = snd_pcm_hw_params_set_channels(handle, params, 2);
+    if(status < 0) {
+	throw SoundException("Failed to set channels: %s\n", snd_strerror(status));
+    }
 
-	// Select sample rate
-        test_rates(params);
-        unsigned int val = 48000;
-        int dir = 0;
+    // Select sample rate
+    test_rates(params);
+    unsigned int val = 48000;
+    int dir = 0;
 
-        status = snd_pcm_hw_params_set_rate_near(handle, params, &val, &dir);
-        if(status < 0) {
-            LOG_ERROR("Failed to open PCM: %s\n", snd_strerror(status));
-        }
+    status = snd_pcm_hw_params_set_rate_near(handle, params, &val, &dir);
+    if(status < 0) {
+        throw SoundException("Failed to open PCM: %s\n", snd_strerror(status));
+    }
 
-        printf("Set sample rate to %i\n", val);
+    printf("Set sample rate to %i\n", val);
 
-        // Set period time (i.e. between interrupts)
+    // Set period time (i.e. between interrupts)
 //        snd_pcm_uframes_t frames = 32;
-        val = 10000;   // 10 ms
-        status = snd_pcm_hw_params_set_period_time_near(handle, params, &val, &dir);
-	if(status < 0) {
-	    LOG_ERROR("Failed to set period: %s\n", snd_strerror(status));
-	}
-        printf("Set period to %i us\n", val);
+    val = 10000;   // 10 ms
+    status = snd_pcm_hw_params_set_period_time_near(handle, params, &val, &dir);
+    if(status < 0) {
+	throw SoundException("Failed to set period: %s\n", snd_strerror(status));
+    }
+    printf("Set period to %i us\n", val);
 
-	snd_pcm_hw_params_get_period_size(params, &m_periodSize, &dir);
+    snd_pcm_hw_params_get_period_size(params, &m_periodSize, &dir);
 
-	// Set the buffer size
-	snd_pcm_uframes_t bufSize = m_periodSize * 3;
-	status = snd_pcm_hw_params_set_buffer_size_near(handle, params, &bufSize);
-	if(status < 0) {
-	    LOG_ERROR("Failed to set buffer size: %s\n", snd_strerror(status));
-	}
-	printf("Buffer size is %lu\n", bufSize);
+    // Set the buffer size
+    snd_pcm_uframes_t bufSize = m_periodSize * 3;
+    status = snd_pcm_hw_params_set_buffer_size_near(handle, params, &bufSize);
+    if(status < 0) {
+	throw SoundException("Failed to set buffer size: %s\n", snd_strerror(status));
+    }
+    printf("Buffer size is %lu\n", bufSize);
 
 
-	status = snd_pcm_hw_params(handle, params);
-        if(status < 0) {
-            LOG_ERROR("Failed to set HW parameters: %s\n", snd_strerror(status));
-        }
+    status = snd_pcm_hw_params(handle, params);
+    if(status < 0) {
+        throw SoundException("Failed to set HW parameters: %s\n", snd_strerror(status));
+    }
 
-        dump_hw_params(params);
-    } while(false);
-
-    snd_pcm_hw_params_free(params);
+    dump_hw_params(params);
 }        
 
 
 /*****************************************************************************/
 void Capture::set_sw_params()
 {
-    snd_pcm_sw_params_t * params;
     snd_pcm_t * handle = mPcmHandle;
 
     if(!handle) {
@@ -331,25 +317,16 @@ void Capture::set_sw_params()
 	return;
     }
 
-    int status = snd_pcm_sw_params_malloc(&params);
+    SndPcmSwParamsT params;
+
+    // Fill in the params structure will full possibilities of the all
+    // configurations for this device
+    int status = snd_pcm_sw_params_current(handle, params);
     if(status < 0) {
-        LOG_ERROR("snd_pcm_sw_params_malloc() failed => %s", snd_strerror(status));
-        return;
+        throw SoundException("snd_pcm_sw_params_current failed:%s", snd_strerror(status));
     }
 
-    do {
-	// Fill in the params structure will full possibilities of the all
-	// configurations for this device
-        status = snd_pcm_sw_params_current(handle, params);
-        if(status < 0) {
-            LOG_ERROR("snd_pcm_sw_params_current failed:%s", snd_strerror(status));
-            break;
-        }
-
-        dump_sw_params(params);
-    } while(false);
-
-    snd_pcm_sw_params_free(params);
+    dump_sw_params(params);
 }        
 
 

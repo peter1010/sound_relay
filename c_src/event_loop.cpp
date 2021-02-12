@@ -8,15 +8,31 @@
 
 EventLoop * EventLoop::mInstance = 0;
 
+/******************************************************************************/
+EventLoopException::EventLoopException(const char * msg)
+{
+    LOG_ERROR("No handler provided");
+}
 
-/*----------------------------------------------------------------------------*/
+
+/******************************************************************************/
+EventLoop & EventLoop::instance() 
+{ 
+    if(!mInstance) { 
+	    create(); 
+    } 
+    return *mInstance;
+}
+
+
+/******************************************************************************/
 void EventLoop::create() 
 {
     mInstance = new EventLoop();
 }
 
 
-/*----------------------------------------------------------------------------*/
+/******************************************************************************/
 EventLoop::EventLoop()
 {
     LOG_DEBUG("EventLoop");
@@ -24,35 +40,35 @@ EventLoop::EventLoop()
 }
 
 
-/*----------------------------------------------------------------------------*/
-bool EventLoop::register_read_callback(int fd, CallbackFunc pFunc, void * arg)
+/******************************************************************************/
+void EventLoop::register_read_callback(int fd, CallbackFunc pFunc, void * arg)
 {
-    return register_callback(fd, pFunc, arg, NULL, NULL, NULL, NULL);
+    register_callback(fd, pFunc, arg, NULL, NULL, NULL, NULL);
 }
 
 
-/*----------------------------------------------------------------------------*/
-bool EventLoop::register_write_callback(int fd, CallbackFunc pFunc, void * arg)
+/******************************************************************************/
+void EventLoop::register_write_callback(int fd, CallbackFunc pFunc, void * arg)
 {
-    return register_callback(fd, NULL, NULL, pFunc, arg, NULL, NULL);
+    register_callback(fd, NULL, NULL, pFunc, arg, NULL, NULL);
 }
 
 
-/*----------------------------------------------------------------------------*/
-bool EventLoop::register_error_callback(int fd, CallbackFunc pFunc, void * arg)
+/******************************************************************************/
+void EventLoop::register_error_callback(int fd, CallbackFunc pFunc, void * arg)
 {
-    return register_callback(fd, NULL, NULL, NULL, NULL, pFunc, arg);
+    register_callback(fd, NULL, NULL, NULL, NULL, pFunc, arg);
 }
 
-/*----------------------------------------------------------------------------*/
-bool EventLoop::register_callback(int fd, CallbackFunc pReadFunc, 
+/******************************************************************************/
+void EventLoop::register_callback(int fd, CallbackFunc pReadFunc, 
 	void * readArg, CallbackFunc pWriteFunc, void * writeArg,
 	CallbackFunc pErrorFunc, void * errorArg)
 {
     unsigned i;
     if(!pReadFunc && !pWriteFunc && !pErrorFunc) {
 	// nothing to do
-        return false;
+	throw EventLoopException("No handler provided");
     }
 
     // See if there is a match entry
@@ -72,8 +88,7 @@ bool EventLoop::register_callback(int fd, CallbackFunc pReadFunc,
             memset(&mPollCallbackList[i], 0, sizeof(EventLoop::CallbackEntry));
             ++mPollListSize;
         } else {
-            LOG_ERROR("Too many handlers");
-	    return false;
+	    throw EventLoopException("Too many handlers");
         }
     }
     if(pReadFunc) {
@@ -91,7 +106,6 @@ bool EventLoop::register_callback(int fd, CallbackFunc pReadFunc,
         mPollCallbackList[i].errorArg = errorArg;
     }
     mPollListChanged = true;
-    return true;
 }
 
 

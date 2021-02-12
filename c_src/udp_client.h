@@ -17,9 +17,9 @@ public:
     const IpAddress & get_hostip() const { return IpAddress::NoAddress(); };
 
 protected:
-    bool init(uint16_t, const IpAddress &, uint16_t, const IpAddress &);
+    void init(uint16_t, const IpAddress &, uint16_t, const IpAddress &);
     
-    bool init(uint16_t, const IpAddress &);
+    void init(uint16_t, const IpAddress &);
 
     static int create_ipv4_socket(uint16_t, uint32_t);
 

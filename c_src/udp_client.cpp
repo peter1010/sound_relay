@@ -35,14 +35,14 @@ UdpClient::~UdpClient()
 /**
  * Initialise the client connection to the peer
  */
-bool UdpClient::init(unsigned short port, const IpAddress & address)
+void UdpClient::init(unsigned short port, const IpAddress & address)
 {
-    return init(port, address, 0, IpAddress::AnyAddress());
+    init(port, address, 0, IpAddress::AnyAddress());
 }
 
 
 /******************************************************************************/
-bool UdpClient::init(uint16_t remotePort, const IpAddress & remoteAddress,
+void UdpClient::init(uint16_t remotePort, const IpAddress & remoteAddress,
 		uint16_t localPort, const IpAddress & localAddress)
 {
     int sock = -1;
@@ -54,12 +54,23 @@ bool UdpClient::init(uint16_t remotePort, const IpAddress & remoteAddress,
         } else if (localAddress.is_ipv6()) {
      	    sock = create_ipv6_socket(localPort, localAddress, localAddress.get_scope_id());
 	} else {
-     	    sock = create_ipv4_socket(localPort, IpAddress::AnyIpv4Address().get_raw_ipv4());
-    	    alt_sock = create_ipv6_socket(localPort, IpAddress::AnyIpv6Address(), 0);
-	    if(sock < 0) {
-	        sock = alt_sock;
-	        alt_sock = -1;
+	    try {
+	  	sock = create_ipv4_socket(localPort, IpAddress::AnyIpv4Address().get_raw_ipv4());
+	    } catch (SocketException e) {
+		sock = -1;
 	    }
+	    try {
+    	        alt_sock = create_ipv6_socket(localPort, IpAddress::AnyIpv6Address(), 0);
+	        if(sock < 0) {
+	            sock = alt_sock;
+	            alt_sock = -1;
+	        }
+	    } catch (SocketException e) {
+		alt_sock = -1;
+    	        if(sock < 0) {
+	            throw NetworkException("Cannot create an all listening socket");
+	        }
+            }
 	}
     } else if(remoteAddress.is_ipv4() && (localAddress.is_any() || localAddress.is_ipv4())) {
     	sock = create_ipv4_socket(localPort, localAddress.get_raw_ipv4());
@@ -68,14 +79,8 @@ bool UdpClient::init(uint16_t remotePort, const IpAddress & remoteAddress,
     } else {
         LOG_DEBUG("Remote %s @ %u", remoteAddress.c_str(), remotePort);
         LOG_DEBUG("Local %s @ %u", localAddress.c_str(), localPort);
-	LOG_ERROR("UDP Client socket can not be created no valid IP address");
-	return false;
+	throw NetworkException("UDP Client socket can not be created no valid IP address");
     }
-
-    if(sock < 0) {
-	return false;
-    }
-
 
     socklen_t len = 0;
     struct sockaddr_storage addr;
@@ -104,18 +109,13 @@ bool UdpClient::init(uint16_t remotePort, const IpAddress & remoteAddress,
     if(len > 0) {
         int status = connect(sock, reinterpret_cast<struct sockaddr *>(&addr), len);
         if(status != 0) {
-    	    LOG_ERRNO_AS_ERROR("connect to %hu failed", remotePort);
-            ::close(sock);
-            return false;
+    	    throw SocketException(sock, true, "connect to %hu failed", remotePort);
         }
     }
 
     Connection * pConn = create_connection();
     if(pConn) {
-	if(!pConn->attach(sock, *this, remoteAddress, remotePort)) {
-            LOG_ERROR("Failed to attach connection");
-	    delete pConn;
-        }
+	pConn->attach(sock, *this, remoteAddress, remotePort);
     } else {
 	::close(sock);
     }
@@ -123,15 +123,11 @@ bool UdpClient::init(uint16_t remotePort, const IpAddress & remoteAddress,
     if(alt_sock >= 0) {
         Connection * pConn = create_connection();
         if(pConn) {
-	    if(!pConn->attach(alt_sock, *this, remoteAddress, remotePort)) {
-                LOG_ERROR("Failed to attach connection");
-	        delete pConn;
-            }
+	    pConn->attach(alt_sock, *this, remoteAddress, remotePort);
         } else {
    	    ::close(sock);
         }
     }
-    return true;
 }
 
 
@@ -141,8 +137,7 @@ int UdpClient::create_ipv4_socket(uint16_t localPort, uint32_t localAddress)
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
 
     if(sock < 0) {
-        LOG_ERRNO_AS_ERROR("Failed to open UDPv4 socket");
-	return -1;
+        SocketException(sock, true, "Failed to open UDPv4 socket");
     }
 
     socklen_t len = 0;
@@ -165,8 +160,7 @@ int UdpClient::create_ipv6_socket(uint16_t localPort,
     int sock = socket(AF_INET6, SOCK_DGRAM, 0);
 
     if(sock < 0) {
-        LOG_ERRNO_AS_ERROR("Failed to open UDPv6 socket");
-	return -1;
+        SocketException(sock, true, "Failed to open UDPv6 socket");
     }
 
     setsockopt_ipv6only(sock);

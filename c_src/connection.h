@@ -14,7 +14,7 @@ public:
     virtual ~Connection() = 0;
 
     // Called from the TcpServer after creating the connection object
-    bool attach(int, Network &, const IpAddress &, unsigned short);
+    void attach(int, Network &, const IpAddress &, unsigned short);
 
 protected:
     typedef unsigned char Byte;

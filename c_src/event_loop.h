@@ -7,15 +7,24 @@ typedef void (*CallbackFunc)(void * arg);
 
 #define MAX_FD_HANDLERS (10)
 
+/******************************************************************************/
+class EventLoopException
+{
+public:
+    EventLoopException(const char *);
+};
+
+
+/******************************************************************************/
 class EventLoop
 {
 public:
 
-    static EventLoop & instance() { if(!mInstance) { create(); } return *mInstance;};
+    static EventLoop & instance();
 
-    bool register_read_callback(int, CallbackFunc, void *);
-    bool register_write_callback(int, CallbackFunc, void *);
-    bool register_error_callback(int, CallbackFunc, void *);
+    void register_read_callback(int, CallbackFunc, void *);
+    void register_write_callback(int, CallbackFunc, void *);
+    void register_error_callback(int, CallbackFunc, void *);
 
     void unregister(int);
 
@@ -25,7 +34,7 @@ private:
     static void create();
     EventLoop();
 
-    bool register_callback(int, CallbackFunc, void *, CallbackFunc, void *,
+    void register_callback(int, CallbackFunc, void *, CallbackFunc, void *,
         	CallbackFunc, void *);
 
     struct CallbackEntry {
