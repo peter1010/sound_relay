@@ -23,9 +23,10 @@ SoundException::SoundException(const char * fmt, ...)
 /******************************************************************************/
 SndPcmHwParamsT::SndPcmHwParamsT()
 {
-    int status = snd_pcm_hw_params_malloc(&ptr);
+    const int status = snd_pcm_hw_params_malloc(&mPtr);
     if(status < 0) {
-        throw SoundException("snd_pcm_hw_params_malloc() failed => %s", snd_strerror(status));
+        throw SoundException("snd_pcm_hw_params_malloc() failed => %s",
+		       	snd_strerror(status));
     }
 }
 
@@ -33,16 +34,17 @@ SndPcmHwParamsT::SndPcmHwParamsT()
 /******************************************************************************/
 SndPcmHwParamsT::~SndPcmHwParamsT()
 {
-    snd_pcm_hw_params_free(ptr);
+    snd_pcm_hw_params_free(mPtr);
 }
 
 
 /******************************************************************************/
 SndPcmSwParamsT::SndPcmSwParamsT()
 {
-    int status = snd_pcm_sw_params_malloc(&ptr);
+    const int status = snd_pcm_sw_params_malloc(&mPtr);
     if(status < 0) {
-        throw SoundException("snd_pcm_sw_params_malloc() failed => %s", snd_strerror(status));
+        throw SoundException("snd_pcm_sw_params_malloc() failed => %s",
+		       	snd_strerror(status));
     }
 }
 
@@ -50,9 +52,64 @@ SndPcmSwParamsT::SndPcmSwParamsT()
 /******************************************************************************/
 SndPcmSwParamsT::~SndPcmSwParamsT()
 {
-    snd_pcm_sw_params_free(ptr);
+    snd_pcm_sw_params_free(mPtr);
 }
 
+
+
+/******************************************************************************/
+SndMixerT::SndMixerT()
+{
+    const int status = snd_mixer_open(&mHandle, 0);
+    if(status < 0) {
+	throw SoundException("snd_mixer_open() failed => %s",
+                    snd_strerror(status));
+    }
+}
+
+
+/******************************************************************************/
+SndMixerT::~SndMixerT()
+{
+    snd_mixer_close(mHandle);
+}
+
+
+/******************************************************************************/
+SndMixerSelemIdT::SndMixerSelemIdT()
+{
+    const int status = snd_mixer_selem_id_malloc(&mSid);
+    if(status < 0) {
+        throw SoundException("snd_mixer_selem_id_malloc() failed => %s",
+                    snd_strerror(status));
+    }
+}
+
+
+/******************************************************************************/
+SndMixerSelemIdT::~SndMixerSelemIdT()
+{
+    snd_mixer_selem_id_free(mSid);
+}
+
+
+/******************************************************************************/
+SndDeviceNameHint::SndDeviceNameHint(int card)
+{
+    const int status = snd_device_name_hint(card, "pcm", &mHints);
+    if(status < 0) {
+        throw SoundException("snd_device_name_hint(%i) failed => %s", card,
+                    snd_strerror(status));
+    }
+}
+        
+
+/******************************************************************************/
+SndDeviceNameHint::~SndDeviceNameHint()
+{	
+    snd_device_name_free_hint(mHints);
+}
+ 
 
 /******************************************************************************/
 Sound::Sound() : mPcmHandle(0)

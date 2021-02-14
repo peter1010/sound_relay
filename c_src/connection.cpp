@@ -19,8 +19,6 @@ Connection::Connection() :  mpRecvBuf(NULL)
 void Connection::attach(int sock, Network & network,
 		const IpAddress & peerAddress, unsigned short /*peerPort*/)
 {
-    bool retVal = true;
-
     mpNetwork = &network;
     mSock = sock;
     mPeerAddress = peerAddress;

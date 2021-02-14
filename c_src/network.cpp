@@ -67,7 +67,7 @@ Network::~Network()
 
 
 /******************************************************************************/
-void Network::delete_connections()
+void Network::delete_connections() noexcept
 {
     for(unsigned i = 0; i < mMaxNumOfConns; i++) {
 	Connection * pConn = mpConns[i];
@@ -103,7 +103,7 @@ Connection * Network::create_connection()
 
 
 /******************************************************************************/
-void Network::register_connection_factory(ConnectionFactory pFunc, void * pArg)
+void Network::register_connection_factory(ConnectionFactory pFunc, void * pArg) noexcept
 {
     mpConnectionFactory = pFunc;
     mpFactoryArg = pArg;
@@ -111,7 +111,7 @@ void Network::register_connection_factory(ConnectionFactory pFunc, void * pArg)
 
 
 /******************************************************************************/
-void Network::detach_connection(int sock, Connection * pConn)
+void Network::detach_connection(int sock, Connection * pConn) noexcept
 {
     LOG_INFO("remove_connection");
     EventLoop::instance().unregister(sock);

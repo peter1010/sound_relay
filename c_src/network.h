@@ -41,15 +41,15 @@ public:
     virtual unsigned get_max_recv_len() const = 0;
 
     // Called from destructor on the Connection
-    void detach_connection(int, Connection *);
+    void detach_connection(int, Connection *) noexcept;
 
     // Should be called from sub-class to register a connection object creation
     // function.
-    void register_connection_factory(ConnectionFactory, void *);
+    void register_connection_factory(ConnectionFactory, void *) noexcept;
 
 protected:
 
-    void delete_connections();
+    void delete_connections() noexcept;
     Connection * create_connection();
 
     static void bind(int sock, uint16_t port, const sockaddr * pAddr, socklen_t len);

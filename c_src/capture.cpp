@@ -54,7 +54,7 @@ void Capture::find_source()
             break;
         }
 
-        printf("Card %i\n", card);
+        LOG_DEBUG("Card %i", card);
 
         char * name = NULL;
         status = snd_card_get_name(card, &name);
@@ -63,18 +63,12 @@ void Capture::find_source()
                     snd_strerror(status));
         } else {
             if(name) {
-                printf("!!! Card name %s\n", name);
+                LOG_DEBUG("Card name %s", name);
                 free(name);
             }
         }
 
-        void ** hints = NULL;
-        status = snd_device_name_hint(card, "pcm", &hints);
-        if(status < 0) {
-            LOG_ERROR("snd_device_name_hint(%i) failed => %s", card,
-                    snd_strerror(status));
-            break;
-        }
+        SndDeviceNameHint hints(card);
 
         for(int i = 0;;i++) {
             if (hints[i] == NULL) {
@@ -88,18 +82,16 @@ void Capture::find_source()
                 }
                 p = snd_device_name_get_hint(hints[i], "NAME");
                 if (p) {
-                     printf("hw:%i,%i => %s\n", card, i, p);
+                     LOG_DEBUG("hw:%i,%i => %s", card, i, p);
                      free(p);
                 }
                 p =  snd_device_name_get_hint(hints[i], "DESC");
                 if(p) {
-                    printf("%s\n", p);
+                    LOG_DEBUG("%s", p);
                     free(p);
                 }
-                printf("---\n");
             }
         }
-        snd_device_name_free_hint(hints);
     } while(true);
 }
 
@@ -107,82 +99,57 @@ void Capture::find_source()
 /*****************************************************************************/
 void Capture::find_mixer(const char * device)
 {
-    snd_mixer_t * handle = NULL;
-    snd_mixer_selem_id_t * sid = NULL;
+    SndMixerT handle;
 
-    int status = snd_mixer_open(&handle, 0);
+    int status = snd_mixer_attach(handle, device);
     if(status < 0) {
-        LOG_ERROR("snd_mixer_open() failed => %s",
+        throw SoundException("snd_mixer_attach(%s) failed => %s", device,
                     snd_strerror(status));
-        return;
     }
 
-    do {
-        status = snd_mixer_attach(handle, device);
-        if(status < 0) {
-            LOG_ERROR("snd_mixer_attach(%s) failed => %s", device,
+    /* Although no one knows what this does, its required */
+    status = snd_mixer_selem_register(handle, NULL, NULL);
+    if(status < 0) {
+        throw SoundException("snd_mixer_selem_register() failed => %s",
                     snd_strerror(status));
-            break;
-        }
-        /* Although no one knows what this does, its required */
-        status = snd_mixer_selem_register(handle, NULL, NULL);
-        if(status < 0) {
-            LOG_ERROR("snd_mixer_selem_register() failed => %s",
-                    snd_strerror(status));
-            break;
-        }
-        status = snd_mixer_load(handle);
-        if(status < 0) {
-            LOG_ERROR("snd_mixer_load() failed => %s", snd_strerror(status));
-            break;
-        }
+    }
 
-        status = snd_mixer_selem_id_malloc(&sid);
-        if(status < 0) {
-            LOG_ERROR("snd_mixer_selem_id_malloc() failed => %s",
-                    snd_strerror(status));
-            break;
-        }
+    status = snd_mixer_load(handle);
+    if(status < 0) {
+        throw SoundException("snd_mixer_load() failed => %s", snd_strerror(status));
+    }
 
-        snd_mixer_elem_t * elem;
-        for(elem = snd_mixer_first_elem(handle); elem; elem = snd_mixer_elem_next(elem))
-        {
-            const int idx = snd_mixer_selem_get_index(elem);
+    SndMixerSelemIdT sid;
+
+    snd_mixer_elem_t * elem;
+    for(elem = snd_mixer_first_elem(handle); elem; elem = snd_mixer_elem_next(elem))
+    {
+        const int idx = snd_mixer_selem_get_index(elem);
 //            printf("Active %i\n", snd_mixer_selem_is_active(elem));
-            printf("NAME: %s:%d\n", snd_mixer_selem_get_name(elem), idx);
-            for(int i = 0; i < 20; i++) {
-                snd_mixer_selem_channel_id_t cid = static_cast<snd_mixer_selem_channel_id_t>(i);
-                int sw = 0;
-                if(snd_mixer_selem_get_capture_switch(elem, cid, &sw) >= 0)
-                {
+        printf("NAME: %s:%d\n", snd_mixer_selem_get_name(elem), idx);
+        for(int i = 0; i < 20; i++) {
+            snd_mixer_selem_channel_id_t cid = static_cast<snd_mixer_selem_channel_id_t>(i);
+            int sw = 0;
+            if(snd_mixer_selem_get_capture_switch(elem, cid, &sw) >= 0)
+            {
 //                    printf("%s:%d\n", snd_mixer_selem_get_name(elem), idx);
-                    printf("- Capture switch %i for %i\n", sw, i);
-                }
-                long value;
-                if(snd_mixer_selem_get_capture_volume(elem, cid, &value) == 0)
-                {
-                    printf("- Capture volume %li for %i\n", value, i );
-                }
+                printf("- Capture switch %i for %i\n", sw, i);
             }
-
-            long min, max;
-            if(snd_mixer_selem_get_capture_volume_range(elem, &min, &max) >= 0) {
-                long minDb = -99, maxDb = -99;
-                snd_mixer_selem_ask_capture_vol_dB (elem, min, &minDb);
-                snd_mixer_selem_ask_capture_vol_dB (elem, max, &maxDb);
-
-                printf("-- Min %li (%li dB), Max %li (%li db)\n", min, minDb, max, maxDb);
+            long value;
+            if(snd_mixer_selem_get_capture_volume(elem, cid, &value) == 0)
+            {
+                printf("- Capture volume %li for %i\n", value, i );
             }
         }
-    }
-    while(0);
 
+        long min, max;
+        if(snd_mixer_selem_get_capture_volume_range(elem, &min, &max) >= 0) {
+            long minDb = -99, maxDb = -99;
+            snd_mixer_selem_ask_capture_vol_dB (elem, min, &minDb);
+            snd_mixer_selem_ask_capture_vol_dB (elem, max, &maxDb);
 
-    if(sid) {
-        snd_mixer_selem_id_free(sid);
-    }
-    if(handle) {
-        snd_mixer_close(handle);
+            printf("-- Min %li (%li dB), Max %li (%li db)\n", min, minDb, max, maxDb);
+        }
     }
 }
 
@@ -438,7 +405,7 @@ void Capture::do_loop()
 
     snd_pcm_state_t state = snd_pcm_state(handle);
 	if(state != PrevState) {
-	    printf("State is %s\n", snd_pcm_state_name(state));
+	    LOG_DEBUG("State is %s\n", snd_pcm_state_name(state));
 	    PrevState = state;
 	}
 
@@ -489,7 +456,7 @@ void Capture::attach(Connection * conn)
  */
 void Capture::init()
 {
-//    find_source();
+    find_source();
 //    find_mixer("hw:0");
     open();
     set_hw_params();

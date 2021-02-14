@@ -51,10 +51,12 @@ void TcpServer::init(unsigned short localPort, const IpAddress & localAddr)
     if(localAddr.is_ipv4()) {
     	sock = create_ipv4_socket(localPort, localAddr.get_raw_ipv4());
     } else if (localAddr.is_ipv6()) {
-    	sock = create_ipv6_socket(localPort, localAddr, localAddr.get_scope_id());
+    	sock = create_ipv6_socket(localPort, localAddr,
+		       		localAddr.get_scope_id());
     } else if (localAddr.is_any()) {
 	try {
-    	    sock = create_ipv4_socket(localPort, IpAddress::AnyIpv4Address().get_raw_ipv4());
+    	    sock = create_ipv4_socket(localPort,
+			    	IpAddress::AnyIpv4Address().get_raw_ipv4());
 	} catch (SocketException e) {
 	    sock = -1;
 	}
