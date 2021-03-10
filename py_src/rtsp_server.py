@@ -15,9 +15,10 @@ class RtspServer(object):
 
 
     def init_socket(self, port):
-    	self.sock = self.create_ipv4_socket(port, '')
-    	self.alt_sock = self.create_ipv6_socket(port, '', 0)
-    
+        self.sock = self.create_ipv4_socket(port, '')
+        self.alt_sock = self.create_ipv6_socket(port, '', 0)
+        self.listening_port = port
+
     def create_ipv4_socket(self, port, address):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -72,11 +73,16 @@ class RtspServer(object):
             scope_id = None
         else:
             address, port, flow_id, scope_id = address
+            if scope_id > 0:
+                address += "%" + socket.if_indextoname(scope_id)
+
         print("incomming connection request from ", address)
-        new_conn = rtsp_connection.RtspConnection(connfd, address, scope_id)
+        new_conn = rtsp_connection.RtspConnection(self, connfd, address)
         self.connections.append(new_conn)
         return new_conn
 
+    def get_listening_port(self):
+        return self.listening_port
 
 if __name__ == "__main__":
     rtsp = RtspServer();
