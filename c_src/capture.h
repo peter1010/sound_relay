@@ -5,7 +5,7 @@
 #include <cstdint>
 
 class RtpConnection;
-class Connection;
+class UdpConnection;
 struct OpusEncoder;
 
 class Capture : public Sound
@@ -32,7 +32,7 @@ public:
     Capture();
     ~Capture();
     void init();
-    void attach(Connection * conn);
+    void attach(UdpConnection * conn);
 
     static void read_callback(void *);
     static void write_callback(void *);

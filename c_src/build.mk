@@ -5,7 +5,7 @@ MAKEDEPEND=gcc -M $(CPPFLAGS)
 LINK=g++ $(LDFLAGS) -lasound -lm -lopus -lsystemd
 
 OBJS= capture.o event_loop.o sender.o logging.o main.o \
-      network.o connection.o udp_client.o \
+      udp_client.o \
       udp_connection.o rtp_connection.o rtp_client.o session.o ip_address.o \
       sound.o rtcp_client.o rtcp_connection.o
 

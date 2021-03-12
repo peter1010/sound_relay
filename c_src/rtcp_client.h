@@ -3,7 +3,7 @@
 
 #include "udp_client.h"
 
-class Connection;
+class UdpConnection;
 class Session;
 class Capture;
 
@@ -18,7 +18,7 @@ public:
 
 protected:
 
-    static Connection * connection_factory(void *);
+    static UdpConnection * connection_factory(void *);
 
 private:
 

@@ -444,7 +444,7 @@ void Capture::do_loop()
 
 
 /*****************************************************************************/
-void Capture::attach(Connection * conn) 
+void Capture::attach(UdpConnection * conn) 
 { 
     mpConn = dynamic_cast<RtpConnection *>(conn); 
 }

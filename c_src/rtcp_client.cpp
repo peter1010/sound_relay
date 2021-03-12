@@ -33,7 +33,7 @@ RtcpClient::~RtcpClient()
 
 
 /*----------------------------------------------------------------------------*/
-Connection * RtcpClient::connection_factory(void * pArg)
+UdpConnection * RtcpClient::connection_factory(void * pArg)
 {
     LOG_DEBUG("rtcp connection factory");
 

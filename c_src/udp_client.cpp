@@ -5,7 +5,45 @@
 
 #include "udp_client.h"
 #include "logging.h"
-#include "connection.h"
+#include "udp_connection.h"
+#include "event_loop.h"
+
+/******************************************************************************/
+SocketException::SocketException(int sock, bool includeErrno, const char * fmt, ...) 
+{
+    mSock = sock;
+    va_list ap;
+    va_start(ap, fmt);
+
+    if(includeErrno) {
+	VLOG_ERRNO_AS_ERROR(fmt, ap);
+    } else {
+	VLOG_ERROR(fmt, ap);
+    }
+    va_end(ap);
+}
+
+
+/******************************************************************************/
+SocketException::~SocketException() 
+{
+    if(mSock >= 0) {
+	::close(mSock);
+    }
+}
+
+
+/******************************************************************************/
+NetworkException::NetworkException(const char * msg) 
+{
+    LOG_ERROR(msg);
+}
+
+
+/******************************************************************************/
+NetworkException::~NetworkException() 
+{
+}
 
 
 /******************************************************************************/
@@ -15,8 +53,9 @@
  * Given we support IPv6 & IPv4 there may be 2 connections per client (IPv4
  * & IPv6)
  */
-UdpClient::UdpClient() : Network(2)
+UdpClient::UdpClient(): mpConnectionFactory(0), mpFactoryArg(0)
 {
+	mpConn = 0;
     LOG_DEBUG("UdpClient");
 }
 
@@ -27,6 +66,7 @@ UdpClient::UdpClient() : Network(2)
  */
 UdpClient::~UdpClient()
 {
+    delete_connections();
     LOG_DEBUG("~UdpClient");
 }
 
@@ -113,7 +153,7 @@ void UdpClient::init(uint16_t remotePort, const IpAddress & remoteAddress,
         }
     }
 
-    Connection * pConn = create_connection();
+    UdpConnection * pConn = create_connection();
     if(pConn) {
 	pConn->attach(sock, *this, remoteAddress, remotePort);
     } else {
@@ -121,7 +161,7 @@ void UdpClient::init(uint16_t remotePort, const IpAddress & remoteAddress,
     }
 
     if(alt_sock >= 0) {
-        Connection * pConn = create_connection();
+        UdpConnection * pConn = create_connection();
         if(pConn) {
 	    pConn->attach(alt_sock, *this, remoteAddress, remotePort);
         } else {
@@ -179,4 +219,76 @@ int UdpClient::create_ipv6_socket(uint16_t localPort,
     return sock;
 }
 
+
+/******************************************************************************/
+void UdpClient::delete_connections() noexcept
+{
+	if(mpConn) {
+            delete mpConn;
+	    mpConn = 0;
+    }
+}
+
+
+/******************************************************************************/
+UdpConnection * UdpClient::create_connection()
+{
+    if(!mpConnectionFactory) {
+        throw NetworkException("No registered Connection factory");
+    }
+    mpConn = mpConnectionFactory(mpFactoryArg);
+    return mpConn;
+}
+
+
+/******************************************************************************/
+void UdpClient::register_connection_factory(ConnectionFactory pFunc, void * pArg) noexcept
+{
+    mpConnectionFactory = pFunc;
+    mpFactoryArg = pArg;
+}
+
+
+/******************************************************************************/
+void UdpClient::detach_connection(int sock, UdpConnection * pConn) noexcept
+{
+    LOG_INFO("remove_connection");
+    EventLoop::instance().unregister(sock);
+
+   	mpConn = 0;
+}
+
+
+/******************************************************************************/
+void UdpClient::bind(int sock, uint16_t port, const sockaddr * pAddr,
+		socklen_t len)
+{
+    int status = ::bind(sock, pAddr, len);
+    if(status != 0) {
+	LOG_ERROR("port %hu", port);
+    	throw SocketException(sock, true, "Bind to %hu failed", port);
+    }
+}
+
+
+/******************************************************************************/
+void UdpClient::setsockopt_ipv6only(int sock)
+{
+    int on = 1;
+    int rc = ::setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&on, sizeof(on));
+    if(rc != 0) {
+	throw SocketException(sock, true, "Failed to set IPPROTO_IPV6");
+    }
+}
+
+
+/******************************************************************************/
+void UdpClient::setsockopt_reuseaddr(int sock)
+{
+    int on = 1;
+    int rc = ::setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void *)&on, sizeof(on));
+    if(rc != 0) {
+	throw SocketException(sock, true, "Failed to set SO_REUSEADDR");
+    }
+}
 
