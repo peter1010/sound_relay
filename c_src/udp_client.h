@@ -14,8 +14,6 @@ public:
     UdpClient();
     virtual ~UdpClient() = 0;
 
-    const IpAddress & get_hostip() const { return IpAddress::NoAddress(); };
-
 protected:
     void init(uint16_t, const IpAddress &, uint16_t, const IpAddress &);
     

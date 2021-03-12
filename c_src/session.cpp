@@ -9,13 +9,6 @@
 Session::Session() : mpSource(0), mpRtp(0), mpRtcp(0)
 {
     LOG_DEBUG("Session");
-
-//    mSession = "123456";
-
-
-    mOurRtpPort = 49176;
-    mOurRtcpPort = mOurRtpPort + 1;;
-
 }
 
 
@@ -23,9 +16,51 @@ Session::Session() : mpSource(0), mpRtp(0), mpRtcp(0)
 Session::~Session()
 {
     LOG_DEBUG("~Session");
-
     disconnect();
 }
+
+
+/*----------------------------------------------------------------------------*/
+void Session::set_our_address(const char * addr)
+{
+    mOurAddress = addr;;
+}
+
+
+/*----------------------------------------------------------------------------*/
+void Session::set_our_rtp_port(const char * port) 
+{
+    mOurRtpPort = atoi(port);
+}
+
+
+/*----------------------------------------------------------------------------*/
+void Session::set_our_rtcp_port(const char * port) 
+{
+    mOurRtcpPort = atoi(port);
+}
+
+
+/*----------------------------------------------------------------------------*/
+void Session::set_peer_address(const char * addr)
+{
+    mPeerAddress = addr;;
+}
+
+
+/*----------------------------------------------------------------------------*/
+void Session::set_peer_rtp_port(const char * port)
+{
+    mPeerRtpPort = atoi(port);
+}
+
+
+/*----------------------------------------------------------------------------*/
+void Session::set_peer_rtcp_port(const char * port)
+{
+    mPeerRtcpPort = atoi(port);
+}
+
 
 
 /*----------------------------------------------------------------------------*/

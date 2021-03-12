@@ -37,6 +37,7 @@ public:
     IpAddress & operator=(const IpAddress &);
     IpAddress & operator=(RawIpv4_t);
     IpAddress & operator=(const struct in_addr &);
+    IpAddress & operator=(const char *);
 
     bool operator==(const IpAddress &) const;
     bool operator!=(const IpAddress & other) const { return !(*this==other);};

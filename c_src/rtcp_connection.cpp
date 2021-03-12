@@ -57,40 +57,68 @@ bool RtcpConnection::parse_recv(const Byte * pData, unsigned len)
 {
     LOG_DEBUG("RTCP message received %u", len);	
 
-    unsigned left =  len;
-    while(left >= 8) {
-	unsigned rc = pData[0] & 0x1F;	// Reception report count
-        unsigned pt = pData[1];		// packet type
+    unsigned pktLeft = len;
+    while(pktLeft >= 4) {
+	unsigned rc = *pData++ & 0x1F;	// Reception report count
+        unsigned pt = *pData++;		// packet type
     
-        unsigned length = get_uint16(&pData[2]);
+        const unsigned length = (get_uint16(pData) + 1) * 4;
+	pData += 2;
 	LOG_DEBUG("length %u", length);
-        uint32_t ssrc = get_uint32(&pData[4]);
-	LOG_DEBUG("ssrc %u", ssrc);
-	
 
-	pData += 8;
-	left -= 8;
+	unsigned left = length - 4;
 
         switch(pt) {
+
 	case 201: 	// RR
-	    while(rc > 0) {
+	{
+            uint32_t ssrc = get_uint32(pData);
+	    LOG_DEBUG("ssrc %u", ssrc);
+	    pData += 4;
+	    left -= 4;
+
+	    while((rc > 0) && (left > 0)) {
         	uint32_t ssrc = get_uint32(pData);
-		LOG_DEBUG("ssrc %u", ssrc);
+		LOG_DEBUG("ssrc_1 %u", ssrc);
 		unsigned fraction = pData[4];
 		LOG_DEBUG("fraction %u", fraction);
 		unsigned cumulative = get_uint24(&pData[5]);
 		LOG_DEBUG("cumulative %u", cumulative);
 		unsigned highest_seq_rcvd = get_uint24(&pData[8]);
-		LOG_DEBUG("higest seq rcvd %u", highest_seq_rcvd);
+		LOG_DEBUG("highest seq rcvd %u", highest_seq_rcvd);
 		unsigned jitter = get_uint32(&pData[12]);
 		LOG_DEBUG("jitter %u", jitter);
 		unsigned lsr = get_uint32(&pData[16]);
-		LOG_DEBUG("lsr %u", lsr);
+		LOG_DEBUG("last SR %u", lsr);
 		unsigned dlsr = get_uint32(&pData[20]);
-		LOG_DEBUG("dlsr %u", dlsr);
+		LOG_DEBUG("delay since last SR %u", dlsr);
 		rc--;
 		pData += 24;
 		left -= 24;
+	    }
+	}
+	break;
+
+	case 202: 
+	    while((rc > 0) && (left > 0)) {
+        	uint32_t ssrc = get_uint32(pData);
+		LOG_DEBUG("ssrc_1 %u", ssrc);
+	        pData += 4;
+	        left -= 4;
+		unsigned n = 0;
+		while(1) {
+		    unsigned typ = pData[n++];
+		    if(typ == 0) {
+		        break;
+		    }
+		    unsigned cnt = pData[n++];
+		    LOG_DEBUG("typ=%u cnt = %u \'%.*s\'", typ, cnt, cnt, pData);
+		    n += cnt;
+		}
+		n = (n + 3) & ~0x3;
+		rc--;
+		pData += n;
+		left -= n;
 	    }
 	    break;
 
@@ -99,6 +127,10 @@ bool RtcpConnection::parse_recv(const Byte * pData, unsigned len)
 
 	    break;
 	}
+	if(left > 0) {
+	    pData += left;
+	}
+	pktLeft -= length;
     }
     return true;
 }

@@ -27,12 +27,7 @@ protected:
 
     Byte * get_recv_buf(unsigned & maxLen) const { maxLen = mMaxRecvLen; return mpRecvBuf; };
 
-
     virtual void send(const Byte *, unsigned) = 0;
-
-    const char * get_hostname() const;
-
-    IpAddress get_hostip(IpVersion_t ver) const;
 
     const IpAddress & get_peer_address() const { return mPeerAddress; };
 
