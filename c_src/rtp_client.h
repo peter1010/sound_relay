@@ -18,8 +18,6 @@ public:
 
 protected:
 
-    static UdpConnection * connection_factory(void *);
-
 private:
 
     Capture * mpSource;

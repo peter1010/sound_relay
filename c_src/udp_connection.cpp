@@ -69,13 +69,10 @@ void UdpConnection::send(const unsigned char * pData, unsigned length)
 
 
 /******************************************************************************/
-void UdpConnection::attach(int sock, UdpClient & network,
-		const IpAddress & peerAddress, unsigned short /*peerPort*/)
+void UdpConnection::attach(int sock, UdpClient & network)
 {
     mpNetwork = &network;
     mSock = sock;
-    mPeerAddress = peerAddress;
-//  mPeerPort = port;
 
     mMaxRecvLen = network.get_max_recv_len();
     if(mMaxRecvLen > 0) {

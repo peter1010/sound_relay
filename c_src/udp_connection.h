@@ -15,7 +15,7 @@ public:
 
     void send(const uint8_t * pData, unsigned length);
 
-    void attach(int, UdpClient &, const IpAddress &, unsigned short);
+    void attach(int, UdpClient &);
 
 protected:
 
@@ -29,13 +29,10 @@ protected:
 
     // Registered with the event loop
     static void recv(void * arg);
-//    virtual bool recv() = 0;
 
     Byte * get_recv_buf(unsigned & maxLen) const { maxLen = mMaxRecvLen; return mpRecvBuf; };
 
 //    virtual void send(const uint8_t *, unsigned) = 0;
-
-    const IpAddress & get_peer_address() const { return mPeerAddress; };
 
     UdpClient * get_network() const { return mpNetwork; };
 
@@ -44,9 +41,8 @@ private:
 
     int mSock;
     UdpClient * mpNetwork;
-    IpAddress mPeerAddress;
 
-    Byte * mpRecvBuf;
+    uint8_t * mpRecvBuf;
     unsigned mMaxRecvLen;
 
     UdpConnection(const UdpConnection &);

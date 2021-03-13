@@ -42,35 +42,24 @@ public:
 	// Called from destructor on the Connection
     void detach_connection(int, UdpConnection *) noexcept;
 
-    // Should be called from sub-class to register a connection object creation
-    // function.
-    void register_connection_factory(ConnectionFactory, void *) noexcept;
-
-
 protected:
-    void init(uint16_t, const IpAddress &, uint16_t, const IpAddress &);
+    int init(uint16_t, const IpAddress &, uint16_t, const IpAddress &);
     
-    void init(uint16_t, const IpAddress &);
+    int init(uint16_t, const IpAddress &);
 
     static int create_ipv4_socket(uint16_t, uint32_t);
 
     static int create_ipv6_socket(uint16_t, const struct in6_addr &, unsigned);
 
 	void delete_connections() noexcept;
-    UdpConnection * create_connection();
 
     static void bind(int sock, uint16_t port, const sockaddr * pAddr, socklen_t len);
     static void setsockopt_ipv6only(int);
-    static void setsockopt_reuseaddr(int);
 
+    UdpConnection * mpConn;
 
 private:
     
-    UdpConnection * mpConn;
-
-    ConnectionFactory mpConnectionFactory;
-    void * mpFactoryArg;
-
     UdpClient(const UdpClient &);
     UdpClient & operator=(const UdpClient &);
 };

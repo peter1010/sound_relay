@@ -17,11 +17,14 @@ RtpClient::RtpClient(const Session & session)
 //    mSink = session.get_sink();
 
 
-    register_connection_factory(RtpClient::connection_factory, this);
-
     // Note init will call RtpClient::connection_factory!
-    init(session.get_peer_rtp_port(), session.get_peer_address(),
+    int sock = init(session.get_peer_rtp_port(), session.get_peer_address(),
 		    session.get_our_rtp_port(), session.get_our_address());
+
+    mpConn = new RtpConnection(mPayloadType);
+	mpConn->attach(sock, *this);
+	mpSource->attach(mpConn);
+
 }
 
 
@@ -30,19 +33,5 @@ RtpClient::~RtpClient()
 {
     LOG_DEBUG("~RtpClient");
 }
-
-
-/*----------------------------------------------------------------------------*/
-UdpConnection * RtpClient::connection_factory(void * pArg)
-{
-    LOG_DEBUG("rtp connection factory");
-
-    RtpClient * pThis = reinterpret_cast<RtpClient *>(pArg);
-    RtpConnection * conn = new RtpConnection(pThis->mPayloadType);
-    pThis->mpSource->attach(conn);
-    return conn;
-}
-
-
 
 
