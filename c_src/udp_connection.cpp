@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-#include "udp_client.h"
+#include "udp_connection.h"
 #include "logging.h"
 #include "event_loop.h"
 
@@ -31,7 +31,6 @@ SocketException::~SocketException()
 	}
 }
 
-
 /******************************************************************************/
 NetworkException::NetworkException(const char * msg) 
 {
@@ -44,7 +43,6 @@ NetworkException::~NetworkException()
 {
 }
 
-
 /******************************************************************************/
 /**
  * Constuct a UDP client
@@ -52,9 +50,9 @@ NetworkException::~NetworkException()
  * Given we support IPv6 & IPv4 there may be 2 connections per client (IPv4
  * & IPv6)
  */
-UdpClient::UdpClient() : mpRecvBuf(NULL)
+UdpConnection::UdpConnection() : mSock(-1), mpRecvBuf(NULL)
 {
-	LOG_DEBUG("UdpClient");
+	LOG_DEBUG("UdpConnection");
 }
 
 
@@ -62,9 +60,10 @@ UdpClient::UdpClient() : mpRecvBuf(NULL)
 /**
  * Deconstuct a UDP client
  */
-UdpClient::~UdpClient()
+UdpConnection::~UdpConnection()
 {
 	if(mSock >= 0) {
+		EventLoop::instance().unregister(mSock);
 		::close(mSock);
 		mSock = -1;
 	}
@@ -72,7 +71,8 @@ UdpClient::~UdpClient()
 		delete [] mpRecvBuf;
 		mpRecvBuf = NULL;
 	}
-	LOG_DEBUG("~UdpClient");
+
+	LOG_DEBUG("~UdpConnection");
 }
 
 
@@ -80,14 +80,14 @@ UdpClient::~UdpClient()
 /**
  * Initialise the client connection to the peer
  */
-int UdpClient::init(unsigned short port, const IpAddress & address)
+int UdpConnection::init(unsigned short port, const IpAddress & address)
 {
 	return init(port, address, 0, IpAddress::AnyAddress());
 }
 
 
 /******************************************************************************/
-int UdpClient::init(uint16_t remotePort, const IpAddress & remoteAddress,
+int UdpConnection::init(uint16_t remotePort, const IpAddress & remoteAddress,
 		uint16_t localPort, const IpAddress & localAddress)
 {
 	int sock = -1;
@@ -141,18 +141,18 @@ int UdpClient::init(uint16_t remotePort, const IpAddress & remoteAddress,
 		}
 	}
 
-//    UdpConnection * pConn = create_connection();
-//    if(pConn) {
-//	pConn->attach(sock, *this, remoteAddress, remotePort);
-//    } else {
-//	::close(sock);
-//    }
+    mMaxRecvLen  = get_max_recv_len();
+	if(mMaxRecvLen > 0) {
+		mpRecvBuf = new uint8_t[mMaxRecvLen];
+		EventLoop::instance().register_read_callback(sock, recv, this);
+
+	}
 	return sock;
 }
 
 
 /******************************************************************************/
-int UdpClient::create_ipv4_socket(uint16_t localPort, uint32_t localAddress)
+int UdpConnection::create_ipv4_socket(uint16_t localPort, uint32_t localAddress)
 {
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -174,7 +174,7 @@ int UdpClient::create_ipv4_socket(uint16_t localPort, uint32_t localAddress)
 
 
 /******************************************************************************/
-int UdpClient::create_ipv6_socket(uint16_t localPort,
+int UdpConnection::create_ipv6_socket(uint16_t localPort,
 		   const struct in6_addr & localAddress, unsigned scope_id)
 {
 	int sock = socket(AF_INET6, SOCK_DGRAM, 0);
@@ -199,29 +199,9 @@ int UdpClient::create_ipv6_socket(uint16_t localPort,
 	return sock;
 }
 
-#if 0
-/******************************************************************************/
-void UdpClient::delete_connections() noexcept
-{
-	if(mpConn) {
-		delete mpConn;
-		mpConn = 0;
-	}
-}
-
 
 /******************************************************************************/
-void UdpClient::detach_connection(int sock, UdpConnection * pConn) noexcept
-{
-	LOG_INFO("remove_connection");
-	EventLoop::instance().unregister(sock);
-
-	mpConn = 0;
-}
-#endif
-
-/******************************************************************************/
-void UdpClient::bind(int sock, uint16_t port, const sockaddr * pAddr,
+void UdpConnection::bind(int sock, uint16_t port, const sockaddr * pAddr,
 		socklen_t len)
 {
 	int status = ::bind(sock, pAddr, len);
@@ -233,7 +213,7 @@ void UdpClient::bind(int sock, uint16_t port, const sockaddr * pAddr,
 
 
 /******************************************************************************/
-void UdpClient::setsockopt_ipv6only(int sock)
+void UdpConnection::setsockopt_ipv6only(int sock)
 {
 	int on = 1;
 	int rc = ::setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (void *)&on, sizeof(on));
@@ -244,7 +224,7 @@ void UdpClient::setsockopt_ipv6only(int sock)
 
 
 /*----------------------------------------------------------------------------*/
-bool UdpClient::recv()
+bool UdpConnection::recv()
 {
 	bool retVal = true;
 	unsigned maxLen = 0; 
@@ -271,32 +251,16 @@ bool UdpClient::recv()
 
 
 /*----------------------------------------------------------------------------*/
-void UdpClient::send(const unsigned char * pData, unsigned length)
+void UdpConnection::send(const unsigned char * pData, unsigned length)
 {
 	::send(mSock, pData, length, 0);
 }
 
-#if 0
-/******************************************************************************/
-void UdpConnection::attach(int sock, UdpClient & network)
-{
-	mpNetwork = &network;
-	mSock = sock;
-
-	mMaxRecvLen = get_max_recv_len();
-	if(mMaxRecvLen > 0) {
-	mpRecvBuf = new unsigned char[mMaxRecvLen];
-
-		EventLoop::instance().register_read_callback(sock,
-			UdpConnection::recv, this);
-	}
-}
-#endif
 
 /******************************************************************************/
-void UdpClient::recv(void * arg)
+void UdpConnection::recv(void * arg)
 {
-	UdpClient * pThis = reinterpret_cast<UdpClient *>(arg);
+	UdpConnection * pThis = reinterpret_cast<UdpConnection *>(arg);
 	if(!pThis->recv()) {
 		delete pThis;
 	}

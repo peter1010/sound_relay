@@ -1,13 +1,13 @@
 #ifndef _RTP_CLIENT_H_
 #define _RTP_CLIENT_H_
 
-#include "udp_client.h"
+#include "udp_connection.h"
 
 class Session;
 class Capture;
 
 
-class RtpClient : public UdpClient
+class RtpClient : public UdpConnection
 {
 public:
     RtpClient(const Session &);

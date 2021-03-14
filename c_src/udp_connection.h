@@ -1,5 +1,5 @@
-#ifndef _UDP_CLIENT_H_
-#define _UDP_CLIENT_H_
+#ifndef _UDP_CONNECTION_H_
+#define _UDP_CONNECTION_H_
 
 //#include "network.h"
 #include "ip_address.h"
@@ -16,7 +16,6 @@ private:
     int mSock;
 };
 
-
 /******************************************************************************/
 class NetworkException 
 {
@@ -26,13 +25,12 @@ public:
 private:
 };
 
-
 /*----------------------------------------------------------------------------*/
-class UdpClient
+class UdpConnection
 {
 public:
-    UdpClient();
-    virtual ~UdpClient() = 0;
+    UdpConnection();
+    virtual ~UdpConnection() = 0;
 
     virtual unsigned get_max_recv_len() const = 0;
 
@@ -45,16 +43,14 @@ protected:
 
     static int create_ipv6_socket(uint16_t, const struct in6_addr &, unsigned);
 
-	void delete_connections() noexcept;
-
     static void bind(int sock, uint16_t port, const sockaddr * pAddr, socklen_t len);
     static void setsockopt_ipv6only(int);
 
     void send(const uint8_t * pData, unsigned length);
 
-	bool recv();
-
     virtual bool parse_recv(const uint8_t *, unsigned len) = 0;
+
+	bool recv();
 
     // Registered with the event loop
     static void recv(void * arg);
@@ -67,8 +63,8 @@ private:
     uint8_t * mpRecvBuf;
     unsigned mMaxRecvLen;
    
-    UdpClient(const UdpClient &);
-    UdpClient & operator=(const UdpClient &);
+    UdpConnection(const UdpConnection &);
+    UdpConnection & operator=(const UdpConnection &);
 };
 
 
