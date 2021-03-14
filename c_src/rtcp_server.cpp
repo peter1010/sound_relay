@@ -1,10 +1,34 @@
-
-#include <sys/random.h>
+#include <string.h>
 #include <endian.h>
 
 #include "logging.h"
-#include "rtcp_connection.h"
+#include "rtcp_server.h"
+#include "session.h"
 #include "capture.h"
+
+
+/*----------------------------------------------------------------------------*/
+RtcpServer::RtcpServer(const Session & session)
+{
+    LOG_DEBUG("RtcpServer");
+
+//  mPayloadType = session.get_payload_type();
+//  mpSource = session.get_source();
+//    mSink = session.get_sink();
+
+    mSock = init(session.get_peer_rtcp_port(), session.get_peer_address(),
+		    session.get_our_rtcp_port(), session.get_our_address());
+//    mpSource->attach(conn);
+
+}
+
+
+/*----------------------------------------------------------------------------*/
+RtcpServer::~RtcpServer() 
+{
+    LOG_DEBUG("~RtpServer");
+}
+
 
 /******************************************************************************/
 static uint32_t get_uint32(const uint8_t * pData)
@@ -31,29 +55,7 @@ static uint32_t get_uint16(const uint8_t * pData)
 
 
 /******************************************************************************/
-RtcpConnection::RtcpConnection()
-{
-    LOG_DEBUG("RtcpConnection");
-    
-//    mSource = new Capture();
-//    mSource.init();
-
-//    mPacket = new Byte[MAX_PKT_SIZE];
-}
-
-
-/******************************************************************************/
-RtcpConnection::~RtcpConnection()
-{
-//    if(mPacket) {
-//	delete [] mPacket;
-//	mPacket = 0;
-//    }
-}
-
-
-/******************************************************************************/
-bool RtcpConnection::parse_recv(const Byte * pData, unsigned len)
+bool RtcpServer::parse_recv(const uint8_t * pData, unsigned len)
 {
     LOG_DEBUG("RTCP message received %u", len);	
 
@@ -135,8 +137,3 @@ bool RtcpConnection::parse_recv(const Byte * pData, unsigned len)
     return true;
 }
 
-
-/*----------------------------------------------------------------------------*/
-void RtcpConnection::send_packet()
-{
-}

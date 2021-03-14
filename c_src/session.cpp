@@ -1,6 +1,6 @@
 #include "session.h"
 #include "rtp_client.h"
-#include "rtcp_client.h"
+#include "rtcp_server.h"
 #include "capture.h"
 #include "logging.h"
 
@@ -68,8 +68,7 @@ void Session::play()
 {
     mpSource = new Capture();
     mpRtp = new RtpClient(*this);
-    
-    mpRtcp = new RtcpClient(*this);
+    mpRtcp = new RtcpServer(*this);
     
     mpSource->init();    
 }

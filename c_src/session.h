@@ -5,7 +5,7 @@
 
 class Capture;
 class RtpClient;
-class RtcpClient;
+class RtcpServer;
 
 class Session
 {
@@ -53,7 +53,7 @@ private:
 
     Capture * mpSource;
     RtpClient * mpRtp;	
-    RtcpClient * mpRtcp;
+    RtcpServer * mpRtcp;
 };
 
 #endif

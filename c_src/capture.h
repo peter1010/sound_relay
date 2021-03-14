@@ -4,15 +4,14 @@
 #include "sound.h"
 #include <cstdint>
 
-class RtpConnection;
-class UdpConnection;
+class RtpClient;
 struct OpusEncoder;
 
 class Capture : public Sound
 {
 private:
     snd_pcm_uframes_t m_periodSize;
-    RtpConnection * mpConn;
+    RtpClient * mpConn;
     int16_t * mpBuffer;
     OpusEncoder * mpEncoder;
 
@@ -32,7 +31,7 @@ public:
     Capture();
     ~Capture();
     void init();
-    void attach(UdpConnection * conn);
+    void attach(RtpClient * conn);
 
     static void read_callback(void *);
     static void write_callback(void *);

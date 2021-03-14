@@ -1,22 +1,23 @@
-#ifndef _RTCP_CLIENT_H_
-#define _RTCP_CLIENT_H_
+#ifndef _RTCP_SERVER_H_
+#define _RTCP_SERVER_H_
 
 #include "udp_client.h"
 
-class UdpConnection;
 class Session;
 class Capture;
 
 
-class RtcpClient : public UdpClient
+class RtcpServer : public UdpClient
 {
 public:
-    RtcpClient(const Session &);
-    virtual ~RtcpClient();
+    RtcpServer(const Session &);
+    virtual ~RtcpServer();
 
     unsigned get_max_recv_len() const {return 512;};
 
 protected:
+
+    virtual bool parse_recv(const uint8_t * data, unsigned len);
 
 private:
 

@@ -5,9 +5,6 @@
 #include "ip_address.h"
 
 class EventLoop;
-class UdpConnection;
-
-typedef UdpConnection * (* ConnectionFactory)(void * pArg);
 
 /******************************************************************************/
 class SocketException 
@@ -39,9 +36,6 @@ public:
 
     virtual unsigned get_max_recv_len() const = 0;
 
-	// Called from destructor on the Connection
-    void detach_connection(int, UdpConnection *) noexcept;
-
 protected:
     int init(uint16_t, const IpAddress &, uint16_t, const IpAddress &);
     
@@ -56,15 +50,26 @@ protected:
     static void bind(int sock, uint16_t port, const sockaddr * pAddr, socklen_t len);
     static void setsockopt_ipv6only(int);
 
-    UdpConnection * mpConn;
+    void send(const uint8_t * pData, unsigned length);
 
+	bool recv();
+
+    virtual bool parse_recv(const uint8_t *, unsigned len) = 0;
+
+    // Registered with the event loop
+    static void recv(void * arg);
+
+    uint8_t * get_recv_buf(unsigned & maxLen) const { maxLen = mMaxRecvLen; return mpRecvBuf; };
+
+    int mSock;
 private:
-    
+
+    uint8_t * mpRecvBuf;
+    unsigned mMaxRecvLen;
+   
     UdpClient(const UdpClient &);
     UdpClient & operator=(const UdpClient &);
 };
-
-
 
 
 #endif
