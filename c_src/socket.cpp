@@ -40,7 +40,7 @@ SocketException::~SocketException()
  * Given we support IPv6 & IPv4 there may be 2 connections per socket (IPv4
  * & IPv6)
  */
-Socket::Socket(int type) : mSockV4(-1), mSockV6(-1), mType(type), mSockCreated(false)
+Socket::Socket(int type) : mSockV4(-1), mSockV6(-1), mType(type)
 {
 	LOG_DEBUG("Socket");
 }
@@ -69,6 +69,8 @@ Socket::~Socket()
 /******************************************************************************/
 void Socket::bind(const IpAddress & addr, uint16_t port)
 {
+	LOG_DEBUG("Binding to %s:%u", addr.c_str(), port);
+
 	if(addr.is_ipv4()) {
 		ipv4_socket(port, addr.get_raw_ipv4(), BIND);
 	} else if (addr.is_ipv6()) {
@@ -82,6 +84,8 @@ void Socket::bind(const IpAddress & addr, uint16_t port)
 /******************************************************************************/
 void Socket::connect(const IpAddress & addr, uint16_t port)
 {
+	LOG_DEBUG("Connecting to %s:%u", addr.c_str(), port);
+
 	if(addr.is_ipv4()) {
 		ipv4_socket(port, addr.get_raw_ipv4(), CONNECT);
 	} else if (addr.is_ipv6()) {
@@ -95,14 +99,18 @@ void Socket::connect(const IpAddress & addr, uint16_t port)
 /******************************************************************************/
 void Socket::listen(int backlog)
 {
-	if((mSockCreated) && (mType == SOCK_STREAM)) {
+	int listenCnt = 0;
+	if(mType == SOCK_STREAM) {
 		if (mSockV4 > 0) {
 			::listen(mSockV4, backlog);
+			listenCnt++;
 		}
 		if (mSockV6 > 0) {
 			::listen(mSockV6, backlog);
+			listenCnt++;
 		}
-	} else {
+	} 
+	if(listenCnt == 0) {
 		throw SocketException(this, false, "Cannot listen on this socket");
 	}
 }
@@ -111,7 +119,7 @@ void Socket::listen(int backlog)
 /******************************************************************************/
 void Socket::ipv4_socket(uint16_t port, uint32_t address, FollowUp_t action)
 {
-	if(!mSockCreated) {
+	if(mSockV4 < 0) {
 		mSockV4 = socket(AF_INET, mType, 0);
 
 		if(mSockV4 < 0) {
@@ -142,7 +150,7 @@ void Socket::ipv4_socket(uint16_t port, uint32_t address, FollowUp_t action)
 void Socket::ipv6_socket(uint16_t port,
 		   const struct in6_addr & address, unsigned scope_id, FollowUp_t action)
 {
-	if(!mSockCreated) {
+	if(mSockV6 < 0) {
 		mSockV6 = socket(AF_INET6, mType, 0);
 
 		if(mSockV6 < 0) {

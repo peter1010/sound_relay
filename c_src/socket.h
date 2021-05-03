@@ -64,7 +64,6 @@ private:
 	int mSockV4;
 	int mSockV6;
 	int mType;
-	bool mSockCreated;
 	
 	Socket(const Socket &);
 	Socket & operator=(const Socket &);
