@@ -18,7 +18,7 @@ RtpClient::RtpClient(const Session & session)
 
 
     // Note init will call RtpClient::connection_factory!
-    mSock = init(session.get_peer_rtp_port(), session.get_peer_address(),
+    init(session.get_peer_rtp_port(), session.get_peer_address(),
 		    session.get_our_rtp_port(), session.get_our_address());
 
 	mpSource->attach(this);

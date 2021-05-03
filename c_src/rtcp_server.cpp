@@ -16,7 +16,7 @@ RtcpServer::RtcpServer(const Session & session)
 //  mpSource = session.get_source();
 //    mSink = session.get_sink();
 
-    mSock = init(session.get_peer_rtcp_port(), session.get_peer_address(),
+    init(session.get_peer_rtcp_port(), session.get_peer_address(),
 		    session.get_our_rtcp_port(), session.get_our_address());
 //    mpSource->attach(conn);
 
