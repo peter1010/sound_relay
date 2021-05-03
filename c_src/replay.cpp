@@ -345,6 +345,51 @@ void Replay::error_callback(void * arg)
 	}
 }
 
+void Replay::write(const uint8_t * pData, unsigned len)
+{
+	static int cnt = 0;
+	snd_pcm_t * handle = mPcmHandle;
+
+	// frames can only be 120,240,480 or 960 @ 48000
+	const int frames = 480;
+
+	int opus_status = opus_decode(mpDecoder, pData,
+				len, mpBuffer, frames, 0);
+
+	if(opus_status <= 0) {
+		LOG_ERROR("Opus decode failed %s", opus_strerror(opus_status));
+	}
+
+    int status = snd_pcm_writei(handle, mpBuffer, frames);
+	if(status < 0)
+	{
+		if(status == -EPIPE)
+		{
+			LOG_ERROR("Under run occurred");
+//	snd_pcm_state_t state = snd_pcm_state(handle);
+//	LOG_DEBUG("State is %s\n", snd_pcm_state_name(state));
+
+			// Restart
+			snd_pcm_prepare(handle);
+    		int status = snd_pcm_writei(handle, mpBuffer, frames);
+		}
+		else
+		{
+			LOG_ERROR("Read error:%s", snd_strerror(status));
+		}
+	}
+	else if(status != (int) frames)
+	{
+		LOG_ERROR("Short write");
+	}
+	cnt++;
+	if(cnt > 100) {
+		snd_pcm_sframes_t delay = snd_pcm_avail(handle);
+		LOG_DEBUG("%lu", delay);
+		cnt = 0;
+	}
+}
+
 
 /*****************************************************************************/
 void Replay::run()
@@ -382,7 +427,7 @@ void Replay::run()
 		return;
 	}
 	
-
+#if 0
 	int fd = mFd.fd;
 	unsigned events = mFd.events;
 	if(events & (POLLIN | POLLRDNORM)) {
@@ -392,6 +437,7 @@ void Replay::run()
 	   EventLoop::instance().register_write_callback(fd, Replay::write_callback, this);
 	}
 	EventLoop::instance().register_error_callback(fd, Replay::error_callback, this);
+#endif
 }
 
 

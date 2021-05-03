@@ -21,11 +21,7 @@ RtpServer::RtpServer(const Session & session)
     init(session.get_peer_rtp_port(), session.get_peer_address(),
 		    session.get_our_rtp_port(), session.get_our_address());
 
-    LOG_DEBUG("a");
-
 	mpSink->attach(this);
-
-    LOG_DEBUG("b");
 
 //	getrandom(&mSequenceNumber, sizeof(mSequenceNumber), 0);
 //    getrandom(&mTimeStamp, sizeof(mTimeStamp), 0);
@@ -60,6 +56,9 @@ bool RtpServer::parse_recv(const uint8_t * pData, unsigned len)
 	const uint32_t timeStamp = (static_cast<uint32_t>(pData[4]) << 24) |
 						 (static_cast<uint32_t>(pData[5]) << 16) |
 						 (static_cast<uint16_t>(pData[6]) << 8) | pData[7];
+//	LOG_DEBUG("%u", sequenceNumber);
+
+	mpSink->write(&pData[RTP_HEADER_LEN], len - RTP_HEADER_LEN);
     return true;
 }
 
