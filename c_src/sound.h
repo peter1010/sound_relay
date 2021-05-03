@@ -99,8 +99,9 @@ class Sound
 {
 public:
     Sound();
-    ~Sound();
+    virtual ~Sound() = 0;
 
+	virtual void init() = 0;
     void close();
 
 protected:

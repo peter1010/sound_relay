@@ -1,12 +1,15 @@
 #include "session.h"
 #include "rtp_client.h"
+#include "rtp_server.h"
+#include "rtcp_client.h"
 #include "rtcp_server.h"
 #include "capture.h"
+#include "replay.h"
 #include "logging.h"
 
 
 /*----------------------------------------------------------------------------*/
-Session::Session() : mpSource(0), mpRtp(0), mpRtcp(0)
+Session::Session() : mpSound(0), mpRtp(0), mpRtcp(0)
 {
     LOG_DEBUG("Session");
 }
@@ -62,16 +65,46 @@ void Session::set_peer_rtcp_port(const char * port)
 }
 
 
+Capture * Session::get_source() const 
+{ 
+	return dynamic_cast<Capture *>(mpSound); 
+};
+
+Replay * Session::get_sink() const 
+{ 
+	return dynamic_cast<Replay *>(mpSound); 
+};
+
+/*----------------------------------------------------------------------------*/
+void Session::capture()
+{
+	Capture * capture = new Capture();
+	mpSound = capture;
+
+    mpRtp = new RtpClient(*this);
+    mpRtcp = new RtcpServer(*this);
+    
+    capture->init();  
+
+}
 
 /*----------------------------------------------------------------------------*/
 void Session::play()
 {
-    mpSource = new Capture();
-    mpRtp = new RtpClient(*this);
-    mpRtcp = new RtcpServer(*this);
+	Replay * replay = new Replay();
+	mpSound = replay;
+
+    LOG_DEBUG("1");
+    mpRtp = new RtpServer(*this);
+    LOG_DEBUG("2");
+    mpRtcp = new RtcpClient(*this);
     
-    mpSource->init();    
+    LOG_DEBUG("3");
+    replay->init();    
+    LOG_DEBUG("4");
+
 }
+
 
 
 /*----------------------------------------------------------------------------*/
@@ -79,16 +112,16 @@ void Session::disconnect()
 {
     LOG_DEBUG("Disconnect");
 
-    if(mpSource) {
-	delete mpSource;
-	mpSource = 0;
+	if(mpSound) {
+		delete mpSound;
+		mpSound = 0;
     }
     if(mpRtp) {
-	delete mpRtp;
-	mpRtp = 0;
+		delete mpRtp;
+		mpRtp = 0;
     }
     if(mpRtcp) {
-	delete mpRtcp;
-	mpRtcp = 0;
+		delete mpRtcp;
+		mpRtcp = 0;
     }
 }

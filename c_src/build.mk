@@ -6,17 +6,21 @@ LINK=g++ $(LDFLAGS) -lasound -lm -lopus -lsystemd
 
 sr_OBJS= socket.o capture.o event_loop.o sender.o logging.o sound_relay_main.o \
       udp_connection.o rtp_client.o session.o ip_address.o \
-      sound.o rtcp_server.o
+      sound.o rtcp_server.o rtp_server.o rtcp_client.o replay.o
 
-pr_OBJS= replay.o event_loop.o logging.o ip_address.o
+pr_OBJS= socket.o replay.o event_loop.o logging.o play_rtp_main.o \
+      udp_connection.o rtp_server.o session.o ip_address.o \
+	  sound.o rtcp_client.o rtp_client.o rtcp_server.o capture.o
+      
 
 .PHONY: all
 all: sound_relay play_rtp
 
 sound_relay: $(sr_OBJS)
-	$(LINK) $(OBJS) -o $@
+	$(LINK) $(sr_OBJS) -o $@
 
-play_rtp : $
+play_rtp : $(pr_OBJS)
+	$(LINK) $(pr_OBJS) -o $@
 
 %.o : %.c
 	$(CC) $(CPPFLAGS) -MMD $(CFLAGS) -o $@ $<

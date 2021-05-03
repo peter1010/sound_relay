@@ -21,6 +21,7 @@ void usage()
 /******************************************************************************/
 int main(int argc, char * const argv[])
 {
+    set_logging_level(5);
 	Session * p = new Session();
 
 	int opt;
@@ -50,9 +51,10 @@ int main(int argc, char * const argv[])
 		}
 	}
 
-    set_logging_level(5);
-	p->capture();
+	p->play();
     EventLoop::instance().main();
 
     delete p;
+//    Capture cap;
+//    cap.init();
 }

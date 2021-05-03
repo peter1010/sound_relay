@@ -4,8 +4,11 @@
 #include "ip_address.h"
 
 class Capture;
-class RtpClient;
-class RtcpServer;
+class Replay;
+//class RtpClient;
+//class RtcpServer;
+class UdpConnection;
+class Sound;
 
 class Session
 {
@@ -32,12 +35,14 @@ public:
     void set_peer_rtp_port(const char * port);
     void set_peer_rtcp_port(const char * port);
 
-    Capture * get_source() const { return mpSource; };
+    Capture * get_source() const;
+    Replay * get_sink() const;
 
     unsigned char get_payload_type() const { return 97; };
     unsigned short get_raw_bit_rate() const { return 48000; };
     unsigned char get_num_of_channels() const { return 2; };
 
+	void capture();
     void play();
 
     void disconnect();
@@ -51,9 +56,9 @@ private:
     unsigned short mPeerRtpPort;
     unsigned short mPeerRtcpPort;
 
-    Capture * mpSource;
-    RtpClient * mpRtp;	
-    RtcpServer * mpRtcp;
+    Sound * mpSound;
+    UdpConnection * mpRtp;	
+    UdpConnection * mpRtcp;
 };
 
 #endif

@@ -1,22 +1,22 @@
-#ifndef _RTP_CLIENT_H_
-#define _RTP_CLIENT_H_
+#ifndef _RTP_SERVER_H_
+#define _RTP_SERVER_H_
 
 #include "udp_connection.h"
 
 class Session;
-class Capture;
+class Replay;
 
 
-class RtpClient : public UdpConnection
+class RtpServer : public UdpConnection
 {
 public:
-    RtpClient(const Session & session);
-    virtual ~RtpClient();
+    RtpServer(const Session &);
+    virtual ~RtpServer();
 
-	// Methods called from the Capture class
+	// Methods called from the Replay class
     uint8_t * get_packet_buffer() const { return &mPacket[RTP_HEADER_LEN]; };
 
-	unsigned get_packet_buffer_size() const { return MAX_PKT_SIZE - RTP_HEADER_LEN; };
+	unsigned get_packet_buffer_size() const { return 0; }; // return MAX_PKT_SIZE - RTP_HEADER_LEN; };
 
     void send_packet(unsigned num_to_send, unsigned timeDuration);
 
@@ -24,11 +24,11 @@ protected:
 
     virtual bool parse_recv(const uint8_t * data, unsigned len);
 
-    virtual unsigned get_max_recv_len() const {return 0;};
+    virtual unsigned get_max_recv_len() const {return MAX_PKT_SIZE;};
 
 private:
 
-    Capture * mpSource;
+    Replay * mpSink;
 
 	enum {
 		RTP_VERSION = 2,
