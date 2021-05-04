@@ -14,6 +14,13 @@
 /******************************************************************************/
 Replay::Replay() : mpConn(0), mpBuffer(0), mpDecoder(0)
 {
+	// Opus supports only 16 bit sized int samples or floats
+	mSampleSize = 16;     // 16 bit samples
+
+	mChannels = 2;        // 2 channels
+
+	// Opus supports 5 bands 8, 12, 16, 24 & 48
+	mSampleRate = 48000;  // 48 kSamples/sec (initinal value)
 }
 
 
@@ -214,10 +221,11 @@ void Replay::set_hw_params()
 		throw SoundException("Failed to set access mode: %s\n", snd_strerror(status));
 	}
 
-	// Select the format
-	test_formats(handle, params);
-	// Set format
+	// test_formats(handle, params);
+	// Select the format 16 bit signed
 	snd_pcm_format_t fmt = SND_PCM_FORMAT_S16;
+	assert(mSampleSize == 16);
+
 	status = snd_pcm_hw_params_set_format(handle, params, fmt);
 	if(status < 0) {
 		throw SoundException("snd_pcm_hw_params_set_format failed:%s", snd_strerror(status));
@@ -225,16 +233,16 @@ void Replay::set_hw_params()
 	LOG_INFO("format=%s", snd_pcm_format_name(fmt));
 
 	// Select number of channels
-	test_channels(params);
+	// test_channels(params);
 	// Set number of channels
-	status = snd_pcm_hw_params_set_channels(handle, params, 2);
+	status = snd_pcm_hw_params_set_channels(handle, params, mChannels);
 	if(status < 0) {
 		throw SoundException("Failed to set channels: %s\n", snd_strerror(status));
 	}
 
 	// Select sample rate
-	test_rates(params);
-	unsigned int val = 48000;
+	// test_rates(params);
+	unsigned int val = mSampleRate;
 	int dir = 0;
 
 	status = snd_pcm_hw_params_set_rate_near(handle, params, &val, &dir);
@@ -243,9 +251,9 @@ void Replay::set_hw_params()
 	}
 
 	printf("Set sample rate to %i\n", val);
+	mSampleRate = val;
 
 	// Set period time (i.e. between interrupts)
-//        snd_pcm_uframes_t frames = 32;
 	val = 10000;   // 10 ms
 	status = snd_pcm_hw_params_set_period_time_near(handle, params, &val, &dir);
 	if(status < 0) {
@@ -345,20 +353,24 @@ void Replay::error_callback(void * arg)
 	}
 }
 
+/*****************************************************************************/
 void Replay::write(const uint8_t * pData, unsigned len)
 {
 	static int cnt = 0;
 	snd_pcm_t * handle = mPcmHandle;
 
-	// frames can only be 120,240,480 or 960 @ 48000
-	const int frames = 480;
+	// 
+	int frames = (mSampleRate * 120UL) / 1000;
 
 	int opus_status = opus_decode(mpDecoder, pData,
 				len, mpBuffer, frames, 0);
 
 	if(opus_status <= 0) {
 		LOG_ERROR("Opus decode failed %s", opus_strerror(opus_status));
+		return;
 	}
+
+	frames = opus_status;
 
 	int status = snd_pcm_writei(handle, mpBuffer, frames);
 	if(status < 0)
@@ -371,11 +383,11 @@ void Replay::write(const uint8_t * pData, unsigned len)
 
 			// Restart
 			snd_pcm_prepare(handle);
-	int status = snd_pcm_writei(handle, mpBuffer, frames);
+			status = snd_pcm_writei(handle, mpBuffer, frames);
 		}
 		else
 		{
-			LOG_ERROR("Read error:%s", snd_strerror(status));
+			LOG_ERROR("Write error:%s", snd_strerror(status));
 		}
 	}
 	else if(status != (int) frames)
@@ -396,12 +408,12 @@ void Replay::run()
 {
 	int error;
 
-	const int frames = 480;  // 48000 / 120 => 1/100 sec
-	mpBuffer = new int16_t[frames * 2]; // 4);
+	const int frames = (mSampleRate * 120UL) / 1000;  // Opus says allow for 120 ms
+	mpBuffer = new int16_t[frames * 2];
 
 	snd_pcm_t * handle = mPcmHandle;
 
-	mpDecoder = opus_decoder_create(48000, 2, &error);
+	mpDecoder = opus_decoder_create(mSampleRate, mChannels, &error);
 	if(mpDecoder == 0) {
 		LOG_ERROR("Failed to create opus decoder: %s", opus_strerror(error));
 		return;
@@ -421,13 +433,13 @@ void Replay::run()
 
 	LOG_DEBUG("Play started");
 
+#if 0
 	const int count = snd_pcm_poll_descriptors_count(handle);
 	if(count != 1) {
 		LOG_ERROR("Alsa using more that one file descriptor");
 		return;
 	}
 
-#if 0
 	int fd = mFd.fd;
 	unsigned events = mFd.events;
 	if(events & (POLLIN | POLLRDNORM)) {

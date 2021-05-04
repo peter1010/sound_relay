@@ -37,4 +37,5 @@ play_rtp : $(pr_OBJS)
 	@mv $*.P $*.d
 
 
--include $(OBJS:.o=.d)
+-include $(sr_OBJS:.o=.d)
+-include $(pr_OBJS:.o=.d)

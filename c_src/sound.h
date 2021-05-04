@@ -108,6 +108,10 @@ protected:
     snd_pcm_t * mPcmHandle;
     struct pollfd mFd;
 
+	uint8_t mSampleSize;
+	uint8_t mChannels;
+	uint16_t mSampleRate;
+
     static void test_access(snd_pcm_t *, snd_pcm_hw_params_t *);
     static void test_formats(snd_pcm_t *, snd_pcm_hw_params_t *);
     static void test_channels(snd_pcm_hw_params_t *);

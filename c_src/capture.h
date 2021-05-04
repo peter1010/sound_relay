@@ -10,10 +10,12 @@ struct OpusEncoder;
 class Capture : public Sound
 {
 private:
-	snd_pcm_uframes_t m_periodSize;
+	snd_pcm_uframes_t mPeriodSize;
 	RtpClient * mpConn;
 	int16_t * mpBuffer;
 	OpusEncoder * mpEncoder;
+
+	uint8_t mPeriodTime;	// in milliseconds
 
 private:
 	void open(const char * alsa_dev=0);
