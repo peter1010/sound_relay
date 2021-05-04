@@ -15,10 +15,10 @@
  */
 enum Log_Level_enum
 {
-    LOG_ERROR_LVL,
-    LOG_WARN_LVL,
-    LOG_INFO_LVL,
-    LOG_DEBUG_LVL
+	LOG_ERROR_LVL,
+	LOG_WARN_LVL,
+	LOG_INFO_LVL,
+	LOG_DEBUG_LVL
 };
 
 #ifdef __cplusplus
@@ -71,27 +71,27 @@ extern void set_logging_level(unsigned level);
 extern void * lock_logger(unsigned level);
 
 extern void log_msg(
-    void * hnd,
-    const char * fmt,
-    ...) __attribute__((format (printf, 2, 3)));
+	void * hnd,
+	const char * fmt,
+	...) __attribute__((format (printf, 2, 3)));
 
 
 extern void vlog_msg(
-    void * hnd,
-    const char * fmt,
-    va_list ap);
+	void * hnd,
+	const char * fmt,
+	va_list ap);
 
 
 extern void log_errno(
-    void * hnd,
-    const char * fmt,
-    ...) __attribute__((format (printf, 2, 3)));
+	void * hnd,
+	const char * fmt,
+	...) __attribute__((format (printf, 2, 3)));
 
 
 extern void vlog_errno(
-    void * hnd,
-    const char * fmt,
-    va_list ap);
+	void * hnd,
+	const char * fmt,
+	va_list ap);
 
 
 #ifdef __cplusplus

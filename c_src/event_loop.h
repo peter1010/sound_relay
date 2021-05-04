@@ -11,7 +11,7 @@ typedef void (*CallbackFunc)(void * arg);
 class EventLoopException
 {
 public:
-    EventLoopException(const char *);
+	EventLoopException(const char *);
 };
 
 
@@ -20,38 +20,38 @@ class EventLoop
 {
 public:
 
-    static EventLoop & instance();
+	static EventLoop & instance();
 
-    void register_read_callback(int, CallbackFunc, void *);
-    void register_write_callback(int, CallbackFunc, void *);
-    void register_error_callback(int, CallbackFunc, void *);
+	void register_read_callback(int, CallbackFunc, void *);
+	void register_write_callback(int, CallbackFunc, void *);
+	void register_error_callback(int, CallbackFunc, void *);
 
-    void unregister(int);
+	void unregister(int);
 
-    void main();
+	void main();
 private:
-    
-    static void create();
-    EventLoop();
 
-    void register_callback(int, CallbackFunc, void *, CallbackFunc, void *,
-        	CallbackFunc, void *);
+	static void create();
+	EventLoop();
 
-    struct CallbackEntry {
-        CallbackFunc pReadFunc;
-        void * readArg;
-        CallbackFunc pWriteFunc;
-        void * writeArg;
-        CallbackFunc pErrorFunc;
-        void * errorArg;
-    };
-   
-    static EventLoop * mInstance;
-    bool mPollListChanged;
-    unsigned mPollListSize;
+	void register_callback(int, CallbackFunc, void *, CallbackFunc, void *,
+		CallbackFunc, void *);
 
-    struct pollfd mPollFdList[MAX_FD_HANDLERS];
-    CallbackEntry mPollCallbackList[MAX_FD_HANDLERS];
+	struct CallbackEntry {
+		CallbackFunc pReadFunc;
+		void * readArg;
+		CallbackFunc pWriteFunc;
+		void * writeArg;
+		CallbackFunc pErrorFunc;
+		void * errorArg;
+	};
+
+	static EventLoop * mInstance;
+	bool mPollListChanged;
+	unsigned mPollListSize;
+
+	struct pollfd mPollFdList[MAX_FD_HANDLERS];
+	CallbackEntry mPollCallbackList[MAX_FD_HANDLERS];
 };
 
 #endif

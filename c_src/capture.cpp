@@ -82,8 +82,8 @@ void Capture::find_source()
 				}
 				p = snd_device_name_get_hint(hints[i], "NAME");
 				if (p) {
-					 LOG_DEBUG("hw:%i,%i => %s", card, i, p);
-					 free(p);
+					LOG_DEBUG("hw:%i,%i => %s", card, i, p);
+					free(p);
 				}
 				p =  snd_device_name_get_hint(hints[i], "DESC");
 				if(p) {
@@ -160,7 +160,7 @@ void Capture::find_mixer(const char * device)
  * Open the PCM device (default)
  *
  */
-void Capture::open(const char * alsa_dev) 
+void Capture::open(const char * alsa_dev)
 {
 	if(mPcmHandle) {
 		LOG_ERROR("PCM Handle already exists");
@@ -208,7 +208,7 @@ void Capture::set_hw_params()
 	}
 
 	// Select the access method
-	test_access(handle, params);
+	// test_access(handle, params);
 	// Set Access format
 	status = snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
 	if(status < 0) {
@@ -216,7 +216,7 @@ void Capture::set_hw_params()
 	}
 
 	// Select the format
-	test_formats(handle, params);
+	// test_formats(handle, params);
 	// Set format
 	snd_pcm_format_t fmt = SND_PCM_FORMAT_S16;
 	status = snd_pcm_hw_params_set_format(handle, params, fmt);
@@ -224,9 +224,9 @@ void Capture::set_hw_params()
 		throw SoundException("snd_pcm_hw_params_set_format failed:%s", snd_strerror(status));
 	}
 	LOG_INFO("format=%s", snd_pcm_format_name(fmt));
-        
+
 	// Select number of channels
-	test_channels(params);
+	// test_channels(params);
 	// Set number of channels
 	status = snd_pcm_hw_params_set_channels(handle, params, 2);
 	if(status < 0) {
@@ -271,7 +271,7 @@ void Capture::set_hw_params()
 	}
 
 	dump_hw_params(params);
-}        
+}
 
 
 /*****************************************************************************/
@@ -294,7 +294,7 @@ void Capture::set_sw_params()
 	}
 
 	dump_sw_params(params);
-}        
+}
 
 
 
@@ -362,19 +362,19 @@ void Capture::run()
 		LOG_ERROR("Failed to create opus encoder: %s", opus_strerror(error));
 		return;
 	}
-    
+
 	opus_encoder_ctl(mpEncoder, OPUS_SET_BITRATE(128000));
 	opus_encoder_ctl(mpEncoder, OPUS_SET_COMPLEXITY(9));
 
 
 	int status = snd_pcm_start(handle);
-	if(status < 0) {	
+	if(status < 0) {
 		LOG_ERROR("Failed to start");
 	}
 
 	snd_pcm_state_t state = snd_pcm_state(handle);
 	printf("State is %s\n", snd_pcm_state_name(state));
-    
+
 	LOG_DEBUG("Record started");
 
 	const int count = snd_pcm_poll_descriptors_count(handle);
@@ -382,7 +382,7 @@ void Capture::run()
 		LOG_ERROR("Alsa using more that one file descriptor");
 		return;
 	}
-	
+
 
 	int fd = mFd.fd;
 	unsigned events = mFd.events;
@@ -390,7 +390,7 @@ void Capture::run()
 		EventLoop::instance().register_read_callback(fd, Capture::read_callback, this);
 	}
 	if(events & (POLLOUT | POLLWRNORM)) {
-	   EventLoop::instance().register_write_callback(fd, Capture::write_callback, this);
+		EventLoop::instance().register_write_callback(fd, Capture::write_callback, this);
 	}
 	EventLoop::instance().register_error_callback(fd, Capture::error_callback, this);
 }
@@ -400,53 +400,47 @@ void Capture::run()
 void Capture::do_loop()
 {
 	static snd_pcm_state_t PrevState = SND_PCM_STATE_SETUP;
-	
+
 	snd_pcm_t * handle = mPcmHandle;
 
 	snd_pcm_state_t state = snd_pcm_state(handle);
-		if(state != PrevState) {
-			LOG_DEBUG("State is %s\n", snd_pcm_state_name(state));
-			PrevState = state;
-		}
+	if(state != PrevState) {
+		LOG_DEBUG("State is %s\n", snd_pcm_state_name(state));
+		PrevState = state;
+	}
 
 	// frames can only be 120,240,480 or 960 @ 48000
 	const int frames = 480;
 
-		int status = snd_pcm_readi(handle, mpBuffer, frames);
-		if(status < 0)
-		{
-			if(status == -EPIPE)
-			{
-				LOG_ERROR("Over run occurred");
-				snd_pcm_prepare(handle);
-			}
-			else
-			{
-				LOG_ERROR("Read error:%s", snd_strerror(status));
-			}
+	int status = snd_pcm_readi(handle, mpBuffer, frames);
+	if(status < 0) {
+		if(status == -EPIPE) {
+			LOG_ERROR("Over run occurred");
+			snd_pcm_prepare(handle);
+		} else {
+			LOG_ERROR("Read error:%s", snd_strerror(status));
 		}
-		else if(status != (int) frames)
-		{
-			LOG_ERROR("Short read");
-		}
-       
+	} else if(status != (int) frames) {
+		LOG_ERROR("Short read");
+	}
 
-		int opus_status = opus_encode(mpEncoder, mpBuffer, frames,
-						mpConn->get_packet_buffer(), 
+
+	int opus_status = opus_encode(mpEncoder, mpBuffer, frames,
+						mpConn->get_packet_buffer(),
 						mpConn->get_packet_buffer_size());
 
-		if(opus_status <= 0) {
-			LOG_ERROR("Opus encode failed %s", opus_strerror(opus_status));
-		}
-	
-		mpConn->send_packet(opus_status, 480);
+	if(opus_status <= 0) {
+		LOG_ERROR("Opus encode failed %s", opus_strerror(opus_status));
+	}
+
+	mpConn->send_packet(opus_status, 480);
 }
 
 
 /*****************************************************************************/
-void Capture::attach(RtpClient * conn) 
-{ 
-	mpConn = conn; 
+void Capture::attach(RtpClient * conn)
+{
+	mpConn = conn;
 }
 
 

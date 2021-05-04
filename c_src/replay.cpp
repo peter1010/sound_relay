@@ -81,8 +81,8 @@ void Replay::find_sink()
 				}
 				p = snd_device_name_get_hint(hints[i], "NAME");
 				if (p) {
-					 LOG_DEBUG("hw:%i,%i => %s", card, i, p);
-					 free(p);
+					LOG_DEBUG("hw:%i,%i => %s", card, i, p);
+					free(p);
 				}
 				p =  snd_device_name_get_hint(hints[i], "DESC");
 				if(p) {
@@ -159,7 +159,7 @@ void Replay::find_mixer(const char * device)
  * Open the PCM device (default)
  *
  */
-void Replay::open(const char * alsa_dev) 
+void Replay::open(const char * alsa_dev)
 {
 	if(mPcmHandle) {
 		LOG_ERROR("PCM Handle already exists");
@@ -223,7 +223,7 @@ void Replay::set_hw_params()
 		throw SoundException("snd_pcm_hw_params_set_format failed:%s", snd_strerror(status));
 	}
 	LOG_INFO("format=%s", snd_pcm_format_name(fmt));
-        
+
 	// Select number of channels
 	test_channels(params);
 	// Set number of channels
@@ -270,7 +270,7 @@ void Replay::set_hw_params()
 	}
 
 	dump_hw_params(params);
-}        
+}
 
 
 /*****************************************************************************/
@@ -293,7 +293,7 @@ void Replay::set_sw_params()
 	}
 
 	dump_sw_params(params);
-}        
+}
 
 
 
@@ -360,7 +360,7 @@ void Replay::write(const uint8_t * pData, unsigned len)
 		LOG_ERROR("Opus decode failed %s", opus_strerror(opus_status));
 	}
 
-    int status = snd_pcm_writei(handle, mpBuffer, frames);
+	int status = snd_pcm_writei(handle, mpBuffer, frames);
 	if(status < 0)
 	{
 		if(status == -EPIPE)
@@ -371,7 +371,7 @@ void Replay::write(const uint8_t * pData, unsigned len)
 
 			// Restart
 			snd_pcm_prepare(handle);
-    		int status = snd_pcm_writei(handle, mpBuffer, frames);
+	int status = snd_pcm_writei(handle, mpBuffer, frames);
 		}
 		else
 		{
@@ -406,19 +406,19 @@ void Replay::run()
 		LOG_ERROR("Failed to create opus decoder: %s", opus_strerror(error));
 		return;
 	}
-    
+
 	opus_decoder_ctl(mpDecoder, OPUS_SET_BITRATE(128000));
 	opus_decoder_ctl(mpDecoder, OPUS_SET_COMPLEXITY(9));
 
 
 //	int status = snd_pcm_start(handle);
-//	if(status < 0) {	
+//	if(status < 0) {
 //		LOG_ERROR("Failed to start");
 //	}
 
 	snd_pcm_state_t state = snd_pcm_state(handle);
 	printf("State is %s\n", snd_pcm_state_name(state));
-    
+
 	LOG_DEBUG("Play started");
 
 	const int count = snd_pcm_poll_descriptors_count(handle);
@@ -426,7 +426,7 @@ void Replay::run()
 		LOG_ERROR("Alsa using more that one file descriptor");
 		return;
 	}
-	
+
 #if 0
 	int fd = mFd.fd;
 	unsigned events = mFd.events;
@@ -434,7 +434,7 @@ void Replay::run()
 		EventLoop::instance().register_read_callback(fd, Replay::read_callback, this);
 	}
 	if(events & (POLLOUT | POLLWRNORM)) {
-	   EventLoop::instance().register_write_callback(fd, Replay::write_callback, this);
+	EventLoop::instance().register_write_callback(fd, Replay::write_callback, this);
 	}
 	EventLoop::instance().register_error_callback(fd, Replay::error_callback, this);
 #endif
@@ -445,7 +445,7 @@ void Replay::run()
 void Replay::do_loop()
 {
 	static snd_pcm_state_t PrevState = SND_PCM_STATE_SETUP;
-	
+
 	snd_pcm_t * handle = mPcmHandle;
 
 	snd_pcm_state_t state = snd_pcm_state(handle);
@@ -457,7 +457,7 @@ void Replay::do_loop()
 	// frames can only be 120,240,480 or 960 @ 48000
 	const int frames = 480;
 
-   
+
 
 	unsigned size = mpConn->get_packet_buffer_size();
 
@@ -491,9 +491,9 @@ void Replay::do_loop()
 
 
 /*****************************************************************************/
-void Replay::attach(RtpServer * conn) 
-{ 
-	mpConn = conn; 
+void Replay::attach(RtpServer * conn)
+{
+	mpConn = conn;
 }
 
 

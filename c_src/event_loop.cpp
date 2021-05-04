@@ -11,180 +11,180 @@ EventLoop * EventLoop::mInstance = 0;
 /******************************************************************************/
 EventLoopException::EventLoopException(const char * msg)
 {
-    LOG_ERROR("No handler provided");
+	LOG_ERROR("No handler provided");
 }
 
 
 /******************************************************************************/
-EventLoop & EventLoop::instance() 
-{ 
-    if(!mInstance) { 
-	    create(); 
-    } 
-    return *mInstance;
-}
-
-
-/******************************************************************************/
-void EventLoop::create() 
+EventLoop & EventLoop::instance()
 {
-    mInstance = new EventLoop();
+	if(!mInstance) {
+		create();
+	}
+	return *mInstance;
+}
+
+
+/******************************************************************************/
+void EventLoop::create()
+{
+	mInstance = new EventLoop();
 }
 
 
 /******************************************************************************/
 EventLoop::EventLoop()
 {
-    LOG_DEBUG("EventLoop");
-    mPollListSize = 0;
+	LOG_DEBUG("EventLoop");
+	mPollListSize = 0;
 }
 
 
 /******************************************************************************/
 void EventLoop::register_read_callback(int fd, CallbackFunc pFunc, void * arg)
 {
-    register_callback(fd, pFunc, arg, NULL, NULL, NULL, NULL);
+	register_callback(fd, pFunc, arg, NULL, NULL, NULL, NULL);
 }
 
 
 /******************************************************************************/
 void EventLoop::register_write_callback(int fd, CallbackFunc pFunc, void * arg)
 {
-    register_callback(fd, NULL, NULL, pFunc, arg, NULL, NULL);
+	register_callback(fd, NULL, NULL, pFunc, arg, NULL, NULL);
 }
 
 
 /******************************************************************************/
 void EventLoop::register_error_callback(int fd, CallbackFunc pFunc, void * arg)
 {
-    register_callback(fd, NULL, NULL, NULL, NULL, pFunc, arg);
+	register_callback(fd, NULL, NULL, NULL, NULL, pFunc, arg);
 }
 
 /******************************************************************************/
-void EventLoop::register_callback(int fd, CallbackFunc pReadFunc, 
+void EventLoop::register_callback(int fd, CallbackFunc pReadFunc,
 	void * readArg, CallbackFunc pWriteFunc, void * writeArg,
 	CallbackFunc pErrorFunc, void * errorArg)
 {
-    unsigned i;
-    if(!pReadFunc && !pWriteFunc && !pErrorFunc) {
-	// nothing to do
-	throw EventLoopException("No handler provided");
-    }
+	unsigned i;
+	if(!pReadFunc && !pWriteFunc && !pErrorFunc) {
+		// nothing to do
+		throw EventLoopException("No handler provided");
+	}
 
-    // See if there is a match entry
-    for(i = 0; i < mPollListSize; i++) {
-        if(mPollFdList[i].fd == fd) {
-            break;
-        }
-    }
+	// See if there is a match entry
+	for(i = 0; i < mPollListSize; i++) {
+		if(mPollFdList[i].fd == fd) {
+			break;
+		}
+	}
 
-    // no match so add to end
-    if(i >= mPollListSize) {
-        LOG_DEBUG("Register %i", fd);
+	// no match so add to end
+	if(i >= mPollListSize) {
+		LOG_DEBUG("Register %i", fd);
 
-        if( i < MAX_FD_HANDLERS) {
-            mPollFdList[i].fd = fd;
-            mPollFdList[i].events = 0;
-            memset(&mPollCallbackList[i], 0, sizeof(EventLoop::CallbackEntry));
-            ++mPollListSize;
-        } else {
-	    throw EventLoopException("Too many handlers");
-        }
-    }
-    if(pReadFunc) {
-        mPollCallbackList[i].pReadFunc = pReadFunc;
-        mPollCallbackList[i].readArg = readArg;
-	mPollFdList[i].events |= (POLLIN | POLLRDNORM);
-    }
-    if(pWriteFunc) {
-        mPollCallbackList[i].pWriteFunc = pWriteFunc;
-        mPollCallbackList[i].writeArg = writeArg;
-        mPollFdList[i].events |= (POLLOUT | POLLWRNORM);
-    }
-    if(pErrorFunc) {
-        mPollCallbackList[i].pErrorFunc = pErrorFunc;
-        mPollCallbackList[i].errorArg = errorArg;
-    }
-    mPollListChanged = true;
+		if( i < MAX_FD_HANDLERS) {
+			mPollFdList[i].fd = fd;
+			mPollFdList[i].events = 0;
+			memset(&mPollCallbackList[i], 0, sizeof(EventLoop::CallbackEntry));
+			++mPollListSize;
+		} else {
+			throw EventLoopException("Too many handlers");
+		}
+	}
+	if(pReadFunc) {
+		mPollCallbackList[i].pReadFunc = pReadFunc;
+		mPollCallbackList[i].readArg = readArg;
+		mPollFdList[i].events |= (POLLIN | POLLRDNORM);
+	}
+	if(pWriteFunc) {
+		mPollCallbackList[i].pWriteFunc = pWriteFunc;
+		mPollCallbackList[i].writeArg = writeArg;
+		mPollFdList[i].events |= (POLLOUT | POLLWRNORM);
+	}
+	if(pErrorFunc) {
+		mPollCallbackList[i].pErrorFunc = pErrorFunc;
+		mPollCallbackList[i].errorArg = errorArg;
+	}
+	mPollListChanged = true;
 }
 
 
 /*----------------------------------------------------------------------------*/
 void EventLoop::unregister(int fd)
 {
-    unsigned i;
-    for(i = 0; i < mPollListSize; i++) {
-        if(mPollFdList[i].fd == fd) {
-            break;
-        }
-    }
-    if(i >= mPollListSize) {
-	return;
-    }
+	unsigned i;
+	for(i = 0; i < mPollListSize; i++) {
+		if(mPollFdList[i].fd == fd) {
+			break;
+		}
+	}
+	if(i >= mPollListSize) {
+		return;
+	}
 
-    LOG_DEBUG("Unregister %i", fd);
+	LOG_DEBUG("Unregister %i", fd);
 
-    --mPollListSize;
+	--mPollListSize;
 
-    for(;i < mPollListSize; i++) {
-	mPollFdList[i] = mPollFdList[i+1];
-	mPollCallbackList[i] = mPollCallbackList[i+1];
-    }
-    mPollListChanged = true;
+	for(;i < mPollListSize; i++) {
+		mPollFdList[i] = mPollFdList[i+1];
+		mPollCallbackList[i] = mPollCallbackList[i+1];
+	}
+	mPollListChanged = true;
 }
 
 
 /*----------------------------------------------------------------------------*/
 void EventLoop::main()
 {
-    LOG_DEBUG("Starting loop");
-    unsigned idx = 0;
-    while(true) {
-	mPollListChanged = false;
+	LOG_DEBUG("Starting loop");
+	unsigned idx = 0;
+	while(true) {
+		mPollListChanged = false;
 
-	if(mPollListSize > 0) {
-	    int hitCnt = poll(mPollFdList, mPollListSize, 0);
+		if(mPollListSize > 0) {
+			int hitCnt = poll(mPollFdList, mPollListSize, 0);
 
-	    while(hitCnt > 0) {
-		idx = (idx >= mPollListSize) ? 0: idx+1;
-	    	unsigned revents = mPollFdList[idx].revents;
-		bool hit = (revents != 0);
+			while(hitCnt > 0) {
+				idx = (idx >= mPollListSize) ? 0: idx+1;
+				unsigned revents = mPollFdList[idx].revents;
+				bool hit = (revents != 0);
 
-		if((revents & (POLLIN | POLLRDNORM)) != 0) {
-		    CallbackFunc pFunc = mPollCallbackList[idx].pReadFunc;
-		    if(pFunc) {
- 			pFunc(mPollCallbackList[idx].readArg);
-		        if(mPollListChanged) {
-			    break;
-		        }
-		    }
-		}
+				if((revents & (POLLIN | POLLRDNORM)) != 0) {
+					CallbackFunc pFunc = mPollCallbackList[idx].pReadFunc;
+					if(pFunc) {
+						pFunc(mPollCallbackList[idx].readArg);
+						if(mPollListChanged) {
+							break;
+						}
+					}
+				}
 
-		if((revents & (POLLOUT | POLLWRNORM)) != 0) {
-		    CallbackFunc pFunc = mPollCallbackList[idx].pWriteFunc;
-		    if(pFunc) {
-			pFunc(mPollCallbackList[idx].writeArg);
-		    	if(mPollListChanged) {
-			    break;
+				if((revents & (POLLOUT | POLLWRNORM)) != 0) {
+					CallbackFunc pFunc = mPollCallbackList[idx].pWriteFunc;
+					if(pFunc) {
+						pFunc(mPollCallbackList[idx].writeArg);
+						if(mPollListChanged) {
+							break;
+						}
+					}
+				}
+				if(revents & POLLERR) {
+					CallbackFunc pFunc = mPollCallbackList[idx].pErrorFunc;
+					if(pFunc) {
+						pFunc(mPollCallbackList[idx].errorArg);
+						if(mPollListChanged) {
+							break;
+						}
+					}
+				}
+
+				if(hit) {
+					--hitCnt;
+				}
 			}
-		    }
 		}
-		if(revents & POLLERR) {
-		    CallbackFunc pFunc = mPollCallbackList[idx].pErrorFunc;
-		    if(pFunc) {
-			pFunc(mPollCallbackList[idx].errorArg);
-		    	if(mPollListChanged) {
-			    break;
-			}
-		    }
-		}
-
-		if(hit) {
-		    --hitCnt;
-		}
-	    }
 	}
-    }
-    LOG_DEBUG("Ending loop");
+	LOG_DEBUG("Ending loop");
 }
 

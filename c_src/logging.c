@@ -15,7 +15,7 @@ FILE * log_out = NULL;
 struct Logger_s
 {
 #ifdef LOG_TIMESTAMP
-    struct timespec ts;
+	struct timespec ts;
 #endif
 };
 
@@ -30,9 +30,9 @@ Logger_t log_info;
  */
 static void log_init(void)
 {
-    if(!log_out) {
-        log_out = stderr;
-    }
+	if(!log_out) {
+		log_out = stderr;
+	}
 }
 
 
@@ -44,7 +44,7 @@ static void log_init(void)
  */
 void set_logging_level(unsigned level)
 {
-    log_level = level;
+	log_level = level;
 }
 
 
@@ -59,16 +59,15 @@ void set_logging_level(unsigned level)
  */
 void * lock_logger(unsigned level)
 {
-    if(level <= log_level) {
+	if(level <= log_level) {
 #ifdef LOG_TIMESTAMP
-        clock_gettime(CLOCK_MONOTONIC, &log_info.ts);
+		clock_gettime(CLOCK_MONOTONIC, &log_info.ts);
 #endif
-        log_init();
-        return (void *) &log_info;
-    }
-    else {
-        return 0;
-    }
+		log_init();
+		return (void *) &log_info;
+	} else {
+		return 0;
+	}
 }
 
 
@@ -82,20 +81,20 @@ void * lock_logger(unsigned level)
  */
 void log_msg(void * hnd, const char * fmt, ...)
 {
-    Logger_t * info = (Logger_t *)hnd;
-    va_list ap;
-    va_start(ap, fmt);
+	Logger_t * info = (Logger_t *)hnd;
+	va_list ap;
+	va_start(ap, fmt);
 
 #ifdef LOG_TIMESTAMP
-    fprintf(log_out, "%u.%03li ",
-        (unsigned)info->ts.tv_sec,
-        info->ts.tv_nsec/1000000
-    );
+	fprintf(log_out, "%u.%03li ",
+		(unsigned)info->ts.tv_sec,
+		info->ts.tv_nsec/1000000
+	);
 #endif
-    vfprintf(log_out, fmt, ap);
-    fputs("\n", log_out);
+	vfprintf(log_out, fmt, ap);
+	fputs("\n", log_out);
 
-    va_end(ap);
+	va_end(ap);
 }
 
 
@@ -109,16 +108,16 @@ void log_msg(void * hnd, const char * fmt, ...)
  */
 void vlog_msg(void * hnd, const char * fmt, va_list ap)
 {
-    Logger_t * info = (Logger_t *)hnd;
+	Logger_t * info = (Logger_t *)hnd;
 
 #ifdef LOG_TIMESTAMP
-    fprintf(log_out, "%u.%03li ",
-        (unsigned)info->ts.tv_sec,
-        info->ts.tv_nsec/1000000
-    );
+	fprintf(log_out, "%u.%03li ",
+		(unsigned)info->ts.tv_sec,
+		info->ts.tv_nsec/1000000
+	);
 #endif
-    vfprintf(log_out, fmt, ap);
-    fputs("\n", log_out);
+	vfprintf(log_out, fmt, ap);
+	fputs("\n", log_out);
 }
 
 
@@ -132,22 +131,22 @@ void vlog_msg(void * hnd, const char * fmt, va_list ap)
  */
 void log_errno(void * hnd, const char * fmt, ...)
 {
-    Logger_t * info = (Logger_t *)hnd;
-    va_list ap;
-    va_start(ap, fmt);
+	Logger_t * info = (Logger_t *)hnd;
+	va_list ap;
+	va_start(ap, fmt);
 
 #ifdef LOG_TIMESTAMP
-    fprintf(log_out, "%u.%03li ",
-        (unsigned)info->ts.tv_sec,
-        info->ts.tv_nsec/1000000
-    );
+	fprintf(log_out, "%u.%03li ",
+		(unsigned)info->ts.tv_sec,
+		info->ts.tv_nsec/1000000
+	);
 #endif
-    vfprintf(log_out, fmt, ap);
-    fputs(":", log_out);
-    fputs(strerror(errno), log_out);
-    fputs("\n", log_out);
+	vfprintf(log_out, fmt, ap);
+	fputs(":", log_out);
+	fputs(strerror(errno), log_out);
+	fputs("\n", log_out);
 
-    va_end(ap);
+	va_end(ap);
 }
 
 
@@ -161,17 +160,17 @@ void log_errno(void * hnd, const char * fmt, ...)
  */
 void vlog_errno(void * hnd, const char * fmt, va_list ap)
 {
-    Logger_t * info = (Logger_t *)hnd;
+	Logger_t * info = (Logger_t *)hnd;
 
 #ifdef LOG_TIMESTAMP
-    fprintf(log_out, "%u.%03li ",
-        (unsigned)info->ts.tv_sec,
-        info->ts.tv_nsec/1000000
-    );
+	fprintf(log_out, "%u.%03li ",
+		(unsigned)info->ts.tv_sec,
+		info->ts.tv_nsec/1000000
+	);
 #endif
-    vfprintf(log_out, fmt, ap);
-    fputs(":", log_out);
-    fputs(strerror(errno), log_out);
-    fputs("\n", log_out);
+	vfprintf(log_out, fmt, ap);
+	fputs(":", log_out);
+	fputs(strerror(errno), log_out);
+	fputs("\n", log_out);
 }
 

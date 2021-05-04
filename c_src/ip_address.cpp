@@ -54,7 +54,7 @@ IpAddress::IpAddress(const struct in_addr & ipv4Addr) : mpAddr(0)
 
 
 /******************************************************************************/
-/** 
+/**
  * Construct an Ipv6 address based on the contents of struct in6_addr
  */
 IpAddress::IpAddress(const struct in6_addr & ipv6Addr, const char * intf) : mpAddr(0)
@@ -366,7 +366,7 @@ void IpAddress::update_ipv6_address(const RawIpv6_t ipv6Address, unsigned scope_
 		memcpy(mpAddr->v6Addr, ipv6Address, sizeof(mpAddr->v6Addr));
 		mpAddr->scopeId = scope_id;;
 	}
-    
+
 }
 
 
