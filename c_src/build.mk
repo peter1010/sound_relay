@@ -11,7 +11,7 @@ sr_OBJS= socket.o capture.o event_loop.o sender.o logging.o sound_relay_main.o \
 pr_OBJS= socket.o replay.o event_loop.o logging.o play_rtp_main.o \
       udp_connection.o rtp_server.o session.o ip_address.o \
 	  sound.o rtcp_client.o rtp_client.o rtcp_server.o capture.o
-      
+
 
 .PHONY: all
 all: sound_relay play_rtp
@@ -28,7 +28,7 @@ play_rtp : $(pr_OBJS)
 	@sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P
 	@rm -f $*.d
 	@mv $*.P $*.d
-	
+
 %.o : %.cpp
 	$(CC) $(CPPFLAGS) -MMD $(CFLAGS) -o $@ $<
 	@cp $*.d $*.P

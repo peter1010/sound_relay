@@ -359,7 +359,7 @@ void Replay::write(const uint8_t * pData, unsigned len)
 	static int cnt = 0;
 	snd_pcm_t * handle = mPcmHandle;
 
-	// 
+	//
 	int frames = (mSampleRate * 120UL) / 1000;
 
 	int opus_status = opus_decode(mpDecoder, pData,

@@ -10,18 +10,18 @@ class Replay;
 class RtcpClient : public UdpConnection
 {
 public:
-    RtcpClient(const Session &);
-    virtual ~RtcpClient();
+	RtcpClient(const Session &);
+	virtual ~RtcpClient();
 
-    unsigned get_max_recv_len() const {return 0;};
+	unsigned get_max_recv_len() const {return 0;};
 
 protected:
 
-    virtual bool parse_recv(const uint8_t * data, unsigned len);
+	virtual bool parse_recv(const uint8_t * data, unsigned len);
 
 private:
 
-    Replay * mpSource;
+	Replay * mpSource;
 //  unsigned char mPayloadType;
 };
 
