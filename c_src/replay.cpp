@@ -304,55 +304,6 @@ void Replay::set_sw_params()
 }
 
 
-
-/*****************************************************************************/
-void Replay::read_callback(void * arg)
-{
-//    LOG_DEBUG("read_callback");
-
-	Replay * pThis = reinterpret_cast<Replay *>(arg);
-	unsigned short revents;
-
-	pThis->mFd.revents = POLLIN | POLLRDNORM;
-	snd_pcm_poll_descriptors_revents(pThis->mPcmHandle, &pThis->mFd, 1, &revents);
-	if(revents) {
-		pThis->do_loop();
-	}
-}
-
-
-/*****************************************************************************/
-void Replay::write_callback(void * arg)
-{
-//    LOG_DEBUG("write_callback");
-
-	Replay * pThis = reinterpret_cast<Replay *>(arg);
-	unsigned short revents;
-
-	pThis->mFd.revents = POLLOUT | POLLWRNORM;
-	snd_pcm_poll_descriptors_revents(pThis->mPcmHandle, &pThis->mFd, 1, &revents);
-	if(revents) {
-		pThis->do_loop();
-	}
-}
-
-
-
-/*****************************************************************************/
-void Replay::error_callback(void * arg)
-{
-//    LOG_DEBUG("error_callback");
-
-	Replay * pThis = reinterpret_cast<Replay *>(arg);
-	unsigned short revents;
-
-	pThis->mFd.revents = POLLERR;
-	snd_pcm_poll_descriptors_revents(pThis->mPcmHandle, &pThis->mFd, 1, &revents);
-	if(revents) {
-		pThis->do_loop();
-	}
-}
-
 /*****************************************************************************/
 void Replay::write(const uint8_t * pData, unsigned len)
 {
@@ -433,72 +384,6 @@ void Replay::run()
 
 	LOG_DEBUG("Play started");
 
-#if 0
-	const int count = snd_pcm_poll_descriptors_count(handle);
-	if(count != 1) {
-		LOG_ERROR("Alsa using more that one file descriptor");
-		return;
-	}
-
-	int fd = mFd.fd;
-	unsigned events = mFd.events;
-	if(events & (POLLIN | POLLRDNORM)) {
-		EventLoop::instance().register_read_callback(fd, Replay::read_callback, this);
-	}
-	if(events & (POLLOUT | POLLWRNORM)) {
-	EventLoop::instance().register_write_callback(fd, Replay::write_callback, this);
-	}
-	EventLoop::instance().register_error_callback(fd, Replay::error_callback, this);
-#endif
-}
-
-
-/*****************************************************************************/
-void Replay::do_loop()
-{
-	static snd_pcm_state_t PrevState = SND_PCM_STATE_SETUP;
-
-	snd_pcm_t * handle = mPcmHandle;
-
-	snd_pcm_state_t state = snd_pcm_state(handle);
-		if(state != PrevState) {
-			LOG_DEBUG("State is %s\n", snd_pcm_state_name(state));
-			PrevState = state;
-		}
-
-	// frames can only be 120,240,480 or 960 @ 48000
-	const int frames = 480;
-
-
-
-	unsigned size = mpConn->get_packet_buffer_size();
-
-	if(size > 0) {
-		int opus_status = opus_decode(mpDecoder, mpConn->get_packet_buffer(),
-				size, mpBuffer, frames, 0);
-
-		if(opus_status <= 0) {
-			LOG_ERROR("Opus decode failed %s", opus_strerror(opus_status));
-		}
-
-		int status = snd_pcm_writei(handle, mpBuffer, frames);
-		if(status < 0)
-		{
-			if(status == -EPIPE)
-			{
-				LOG_ERROR("Over run occurred");
-				snd_pcm_prepare(handle);
-			}
-			else
-			{
-				LOG_ERROR("Read error:%s", snd_strerror(status));
-			}
-		}
-		else if(status != (int) frames)
-		{
-			LOG_ERROR("Short write");
-		}
-	}
 }
 
 

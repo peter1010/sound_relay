@@ -24,7 +24,6 @@ private:
 	void find_sink();
 	void find_mixer(const char *);
 	void run();
-	void do_loop();
 
 public:
 
@@ -34,10 +33,6 @@ public:
 	void attach(RtpServer * conn);
 
 	void write(const uint8_t * pData, unsigned len);
-
-	static void read_callback(void *);
-	static void write_callback(void *);
-	static void error_callback(void *);
 };
 
 #endif
