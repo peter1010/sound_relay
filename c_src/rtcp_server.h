@@ -10,18 +10,18 @@ class Capture;
 class RtcpServer : public UdpConnection
 {
 public:
-    RtcpServer(const Session &);
-    virtual ~RtcpServer();
+	RtcpServer(const Session &);
+	virtual ~RtcpServer();
 
-    unsigned get_max_recv_len() const {return 512;};
+	unsigned get_max_recv_len() const {return 512;};
 
 protected:
 
-    virtual bool parse_recv(const uint8_t * data, unsigned len);
+	virtual bool parse_recv(const uint8_t * data, unsigned len);
 
 private:
 
-    Capture * mpSource;
+	Capture * mpSource;
 //  unsigned char mPayloadType;
 };
 

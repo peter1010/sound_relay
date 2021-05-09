@@ -8,7 +8,7 @@ class Socket;
 struct in6_addr;
 
 /******************************************************************************/
-class SocketException 
+class SocketException
 {
 public:
 	SocketException(Socket * , bool, const char * fmt, ...) __attribute__((format (printf, 4, 5)));
@@ -64,7 +64,7 @@ private:
 	int mSockV4;
 	int mSockV6;
 	int mType;
-	
+
 	Socket(const Socket &);
 	Socket & operator=(const Socket &);
 };

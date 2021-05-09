@@ -64,7 +64,7 @@ void UdpConnection::init(uint16_t remotePort, const IpAddress & remoteAddress,
 	}
 
 	mSock.connect(remoteAddress, remotePort);
-    mMaxRecvLen  = get_max_recv_len();
+	mMaxRecvLen  = get_max_recv_len();
 	if(mMaxRecvLen > 0) {
 		mpRecvBuf = new uint8_t[mMaxRecvLen];
 		EventLoop::instance().register_read_callback(mSock.fileNo1(), recv, this);
@@ -76,7 +76,7 @@ void UdpConnection::init(uint16_t remotePort, const IpAddress & remoteAddress,
 bool UdpConnection::recv()
 {
 	bool retVal = true;
-	unsigned maxLen = 0; 
+	unsigned maxLen = 0;
 	uint8_t * pBuf = get_recv_buf(maxLen);
 
 	const int status = mSock.recv(pBuf, maxLen);
@@ -84,7 +84,7 @@ bool UdpConnection::recv()
 	if(status <= 0) {
 		if(status < 0) {
 			LOG_ERRNO_AS_ERROR("Recv failed");
-		} 
+		}
 		LOG_ERROR("Closing connection");
 		retVal = false;
 	} else {

@@ -9,7 +9,7 @@
 #include "event_loop.h"
 
 /*----------------------------------------------------------------------------*/
-SocketException::SocketException(Socket * pSock, bool includeErrno, const char * fmt, ...) 
+SocketException::SocketException(Socket * pSock, bool includeErrno, const char * fmt, ...)
 {
 	mpSock = pSock;
 	va_list ap;
@@ -25,7 +25,7 @@ SocketException::SocketException(Socket * pSock, bool includeErrno, const char *
 
 
 /******************************************************************************/
-SocketException::~SocketException() 
+SocketException::~SocketException()
 {
 //	if(mpSock) {
 //		delete mpSock;
@@ -109,7 +109,7 @@ void Socket::listen(int backlog)
 			::listen(mSockV6, backlog);
 			listenCnt++;
 		}
-	} 
+	}
 	if(listenCnt == 0) {
 		throw SocketException(this, false, "Cannot listen on this socket");
 	}
@@ -148,7 +148,7 @@ void Socket::ipv4_socket(uint16_t port, uint32_t address, FollowUp_t action)
 
 /******************************************************************************/
 void Socket::ipv6_socket(uint16_t port,
-		   const struct in6_addr & address, unsigned scope_id, FollowUp_t action)
+		const struct in6_addr & address, unsigned scope_id, FollowUp_t action)
 {
 	if(mSockV6 < 0) {
 		mSockV6 = socket(AF_INET6, mType, 0);

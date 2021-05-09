@@ -5,44 +5,44 @@
 #include <alsa/asoundlib.h>
 
 /******************************************************************************/
-class SoundException 
+class SoundException
 {
 public:
-    SoundException(const char * fmt, ...) __attribute__((format (printf, 2, 3)));
+	SoundException(const char * fmt, ...) __attribute__((format (printf, 2, 3)));
 };
 
 
 /******************************************************************************/
-class SndPcmHwParamsT 
+class SndPcmHwParamsT
 {
 public:
-    SndPcmHwParamsT();
-    ~SndPcmHwParamsT() noexcept;
+	SndPcmHwParamsT();
+	~SndPcmHwParamsT() noexcept;
 
-    operator snd_pcm_hw_params_t *() const { return mPtr; };
+	operator snd_pcm_hw_params_t *() const { return mPtr; };
 private:
 
-    snd_pcm_hw_params_t * mPtr;
+	snd_pcm_hw_params_t * mPtr;
 
-    SndPcmHwParamsT(const SndPcmHwParamsT &);
-    SndPcmHwParamsT & operator=(const SndPcmHwParamsT &);
+	SndPcmHwParamsT(const SndPcmHwParamsT &);
+	SndPcmHwParamsT & operator=(const SndPcmHwParamsT &);
 };
 
 
 /******************************************************************************/
-class SndPcmSwParamsT 
+class SndPcmSwParamsT
 {
 public:
-    SndPcmSwParamsT();
-    ~SndPcmSwParamsT() noexcept;
+	SndPcmSwParamsT();
+	~SndPcmSwParamsT() noexcept;
 
-    operator snd_pcm_sw_params_t *() const { return mPtr; };
+	operator snd_pcm_sw_params_t *() const { return mPtr; };
 private:
 
-    snd_pcm_sw_params_t * mPtr;
+	snd_pcm_sw_params_t * mPtr;
 
-    SndPcmSwParamsT(const SndPcmSwParamsT &);
-    SndPcmSwParamsT & operator=(const SndPcmSwParamsT &);
+	SndPcmSwParamsT(const SndPcmSwParamsT &);
+	SndPcmSwParamsT & operator=(const SndPcmSwParamsT &);
 };
 
 
@@ -50,15 +50,15 @@ private:
 class SndMixerT
 {
 public:
-    SndMixerT();
-    ~SndMixerT() noexcept;
+	SndMixerT();
+	~SndMixerT() noexcept;
 
-    operator snd_mixer_t * () const { return mHandle; };
+	operator snd_mixer_t * () const { return mHandle; };
 private:
-    snd_mixer_t * mHandle;
+	snd_mixer_t * mHandle;
 
-    SndMixerT(const SndMixerT &);
-    SndMixerT & operator=(const SndMixerT &);
+	SndMixerT(const SndMixerT &);
+	SndMixerT & operator=(const SndMixerT &);
 };
 
 
@@ -66,15 +66,15 @@ private:
 class SndMixerSelemIdT
 {
 public:
-    SndMixerSelemIdT();
-    ~SndMixerSelemIdT() noexcept;
+	SndMixerSelemIdT();
+	~SndMixerSelemIdT() noexcept;
 
-    operator snd_mixer_selem_id_t * () const { return mSid; };
+	operator snd_mixer_selem_id_t * () const { return mSid; };
 private:
-    snd_mixer_selem_id_t * mSid;
+	snd_mixer_selem_id_t * mSid;
 
-    SndMixerSelemIdT(const SndMixerSelemIdT &);
-    SndMixerSelemIdT & operator=(const SndMixerSelemIdT &);
+	SndMixerSelemIdT(const SndMixerSelemIdT &);
+	SndMixerSelemIdT & operator=(const SndMixerSelemIdT &);
 };
 
 
@@ -82,15 +82,15 @@ private:
 class SndDeviceNameHint
 {
 public:
-    SndDeviceNameHint(int);
-    ~SndDeviceNameHint() noexcept;
+	SndDeviceNameHint(int);
+	~SndDeviceNameHint() noexcept;
 
-    void * operator[](int idx) const { return mHints[idx]; };
+	void * operator[](int idx) const { return mHints[idx]; };
 private:
-    void ** mHints = NULL;
+	void ** mHints = NULL;
 
-    SndDeviceNameHint(const SndDeviceNameHint &);
-    SndDeviceNameHint & operator=(const SndDeviceNameHint &);
+	SndDeviceNameHint(const SndDeviceNameHint &);
+	SndDeviceNameHint & operator=(const SndDeviceNameHint &);
 };
 
 
@@ -98,30 +98,30 @@ private:
 class Sound
 {
 public:
-    Sound();
-    virtual ~Sound() = 0;
+	Sound();
+	virtual ~Sound() = 0;
 
 	virtual void init() = 0;
-    void close();
+	void close();
 
 protected:
-    snd_pcm_t * mPcmHandle;
-    struct pollfd mFd;
+	snd_pcm_t * mPcmHandle;
+	struct pollfd mFd;
 
 	uint8_t mSampleSize;
 	uint8_t mChannels;
 	uint16_t mSampleRate;
 
-    static void test_access(snd_pcm_t *, snd_pcm_hw_params_t *);
-    static void test_formats(snd_pcm_t *, snd_pcm_hw_params_t *);
-    static void test_channels(snd_pcm_hw_params_t *);
-    static void test_rates(snd_pcm_hw_params_t *);
+	static void test_access(snd_pcm_t *, snd_pcm_hw_params_t *);
+	static void test_formats(snd_pcm_t *, snd_pcm_hw_params_t *);
+	static void test_channels(snd_pcm_hw_params_t *);
+	static void test_rates(snd_pcm_hw_params_t *);
 
-    static void dump_hw_params(snd_pcm_hw_params_t * params);
-    static void dump_sw_params(snd_pcm_sw_params_t * params);
+	static void dump_hw_params(snd_pcm_hw_params_t * params);
+	static void dump_sw_params(snd_pcm_sw_params_t * params);
 
 private:
-    static snd_output_t * mStdout;
+	static snd_output_t * mStdout;
 
 };
 
