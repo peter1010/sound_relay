@@ -48,17 +48,14 @@ class RtspServer(object):
 				elif event == self.alt_sock.fileno():
 					poller.register(self.create_connection(self.alt_sock), select.POLLIN)
 				else:
-					print(event)
 					found_idx = None
 					for idx, conn in enumerate(self.connections):
-						print(idx, conn.fileno())
 						if event == conn.fileno():
 							found_idx = idx
 							conn_awake = conn
 							break
 
 					if found_idx is not None:
-						print("one")
 						status = conn_awake.read()
 						if status is False:
 							poller.unregister(conn_awake)

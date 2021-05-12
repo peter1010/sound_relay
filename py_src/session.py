@@ -31,7 +31,9 @@ class Session(object):
 	def get_peer_rtcp_port(self):
 		return self.PeerRtcpPort
 
-	#void set_our_address(const IpAddress & addr) {mOurAddress = addr;};
+	def set_our_address(self, addr):
+		self.OurAddress = addr;
+
 	def add_peer_address(self, addr):
 		self.PeerAddress = addr
 
@@ -55,11 +57,23 @@ class Session(object):
 	def get_num_of_channels(self):
 		return 2
 
+	def get_player(self):
+		return os.path.join("..", "c_src", "__armv6l__", "sound_relay")
+
 	def play(self):
 		pid = os.fork()
 		if pid == 0:
-			# Child
-			os.execvp()
+			# ChildOB
+			player = self.get_player()
+			args = [os.path.basename(player),
+					"-c", str(self.PeerRtpPort),
+					"-b", str(self.PeerRtcpPort),
+					"-a", str(self.PeerAddress),
+					"-z", str(self.OurRtpPort),
+					"-y", str(self.OurRtcpPort),
+					"-x", str(self.OurAddress)]
+			print(args)
+			os.execvp(player, args)
 
 		print("play...")
 

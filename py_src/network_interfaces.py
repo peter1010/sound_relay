@@ -49,7 +49,7 @@ def get_hostip(sock, ver):
 		return local_address[0]
 
 	if (ver == IPv6) and (len(local_address) == 4):
-		return local_address[0]
+		return local_address[0] + "%" + socket.if_indextoname(local_address[3])
 
 	libc = ctypes.CDLL(ctypes.util.find_library("c"))
 	ifaddr = ctypes.POINTER(ifaddrs)()

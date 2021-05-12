@@ -40,6 +40,7 @@ class RtspConnection(object):
 		for line in lines[1:]:
 			name, value = line.split(b":", 1)
 			attributes[name.lower()] = value
+		print("Recv: ", request)
 		print(attributes)
 		if request == b"OPTIONS":
 			self.parse_option_request(attributes)
@@ -56,8 +57,8 @@ class RtspConnection(object):
 	def parse_option_request(self, attributes):
 		lines = [
 			b"RTSP/1.0 200 OK",
-	b"CSeq: " + attributes[b"cseq"],
-	b"Public: DESCRIBE, SETUP, PLAY, TEARDOWN",
+			b"CSeq: " + attributes[b"cseq"],
+			b"Public: DESCRIBE, SETUP, PLAY, TEARDOWN",
 			b"", b""]
 
 		print(lines)
@@ -65,8 +66,6 @@ class RtspConnection(object):
 
 
 	def parse_describe_request(self, url, attributes):
-#	if(name == "cseq") {
-#	    mCseq = value;
  #       } else if(name == "accept") {
 #	    // Check that application/sdp is an option
 #	    if(value.find("application/sdp") == std::string::npos) {
@@ -90,26 +89,26 @@ class RtspConnection(object):
 		pt = str(session.get_payload_type())
 		sdp = [
 			"v=0",
-	"o=- {0} {1} IN IP4 {2}".format(session.get_sdp_id(),
-	session.get_sdp_ver(), self.get_hostip(4)),
-	"s=TV Session",
-	"i=Sound from the TV",
-	"t= 0 0",
-	"a=recvonly",
+			"o=- {0} {1} IN IP4 {2}".format(session.get_sdp_id(),
+			session.get_sdp_ver(), self.get_hostip(4)),
+			"s=TV Session",
+			"i=Sound from the TV",
+			"t= 0 0",
+			"a=recvonly",
 			"a=control:rtsp://{0}:{1}/{2}".format(self.get_hostname(),
-	self.get_rtsp_server_port(), session.get_pathname()),
-	"m=audio {0} RTP/AVP {1}".format(session.get_our_rtp_port(), pt),
-	"a=rtpmap:{0} opus/{1}/{2}".format(pt, session.get_raw_bit_rate(),
-		session.get_num_of_channels()),
+			self.get_rtsp_server_port(), session.get_pathname()),
+			"m=audio {0} RTP/AVP {1}".format(session.get_our_rtp_port(), pt),
+			"a=rtpmap:{0} opus/{1}/{2}".format(pt, session.get_raw_bit_rate(),
+			session.get_num_of_channels()),
 			""]
 		sdp = "\r\n".join(sdp)
 		sdp = sdp.encode(encoding = "UTF-8")
 
 		lines = [
 			b"RTSP/1.0 200 OK",
-	b"CSeq: " + attributes[b"cseq"],
-	b"Content-Type: application/sdp",
-	b"Content-Length: " + str(len(sdp)).encode(encoding="UTF-8"),
+			b"CSeq: " + attributes[b"cseq"],
+			b"Content-Type: application/sdp",
+			b"Content-Length: " + str(len(sdp)).encode(encoding="UTF-8"),
 			b"", b""]
 		self.connfd.send(b"\r\n".join(lines))
 		self.connfd.send(sdp)
@@ -144,11 +143,11 @@ class RtspConnection(object):
 			session.set_peer_rtp_port(int(ports[0]))
 			session.set_peer_rtcp_port(int(ports[0])+1)
 
-#    if(peerAddress.is_ipv4()) {
-#        pSession->set_our_address(get_hostip(IPv4));
-#    } else {
-#        pSession->set_our_address(get_hostip(IPv6));
-#    }
+		if self.peer_address.find(".") >= 0:
+			session.set_our_address(self.get_hostip(4))
+		else:
+			session.set_our_address(self.get_hostip(6))
+
 		session.add_peer_address(self.peer_address);
 
 #    // Mandatory fields:
@@ -163,7 +162,7 @@ class RtspConnection(object):
 
 		lines = [
 			b"RTSP/1.0 200 OK",
-	b"CSeq: " + attributes[b"cseq"],
+			b"CSeq: " + attributes[b"cseq"],
 			b"Session: " + session.get_id(),
 			b"Transport: " + transport,
 			b"", b""]
@@ -181,7 +180,7 @@ class RtspConnection(object):
 #    // CSeq:
 		lines = [
 			b"RTSP/1.0 200 OK",
-	b"CSeq: " + attributes[b"cseq"],
+			b"CSeq: " + attributes[b"cseq"],
 			b"", b""]
 
 		print(lines)
