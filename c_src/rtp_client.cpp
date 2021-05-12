@@ -8,7 +8,7 @@
 
 
 /*----------------------------------------------------------------------------*/
-RtpClient::RtpClient(const Session & session)
+RtpClient::RtpClient(const Session & session) : mSendFails(0)
 {
 	LOG_DEBUG("RtpClient");
 
@@ -68,5 +68,12 @@ void RtpClient::send_packet(unsigned num_to_send, unsigned timeDuration)
 	mPacket[6] = (mTimeStamp >> 8) & 0xFF;
 	mPacket[7] = mTimeStamp & 0xFF;
 
-	send(mPacket, num_to_send + RTP_HEADER_LEN);
+	try {
+    	send(mPacket, num_to_send + RTP_HEADER_LEN);
+	} catch(SocketException) {
+		mSendFails++;
+		if(mSendFails % 100) {
+			LOG_DEBUG("Send failed %u", mSendFails);
+		}
+	}
 }

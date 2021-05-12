@@ -44,6 +44,7 @@ private:
 	uint8_t * mPacket;
 	uint16_t mSequenceNumber;
 	uint32_t mTimeStamp;
+	uint32_t mSendFails;
 };
 
 
