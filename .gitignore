@@ -2,3 +2,4 @@ build
 pkg
 c_src/__*__
 py_src/__pycache__
+*tar.xz

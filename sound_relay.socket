@@ -1,0 +1,10 @@
+[Unit]
+#Conflicts=sound_relay.service
+
+[Socket]
+ListenStream=554
+Backlog=1
+Accept=false
+
+[Install]
+WantedBy=Sockets.target

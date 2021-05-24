@@ -58,12 +58,20 @@ class Session(object):
 		return 2
 
 	def get_player(self):
-		return os.path.join("..", "c_src", "__armv6l__", "sound_relay")
+		poss = [
+			("..", "c_src", "__armv6l__", "sound_relay"),
+		    ("c_src", "__armv6l__", "sound_relay")
+		]
+		for parts in poss:
+			filepath = os.path.join(*parts)
+			print(filepath)
+			if os.path.exists(filepath):
+				return filepath
 
 	def play(self):
 		pid = os.fork()
 		if pid == 0:
-			# ChildOB
+			# Child
 			player = self.get_player()
 			args = [os.path.basename(player),
 					"-c", str(self.PeerRtpPort),

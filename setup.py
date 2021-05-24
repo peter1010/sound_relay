@@ -47,6 +47,10 @@ def get_sound_relay_exe(do_compile=True):
    return os.path.join(find_c_src(), "__%s__" % os.uname().machine, "sound_relay")
 
 
+def get_play_rtp_exe(do_compile=True):
+   return os.path.join(find_c_src(), "__%s__" % os.uname().machine, "play_rtp")
+
+
 setup(
     name='sound_relay',
     version='1.0',
@@ -58,8 +62,8 @@ setup(
     package_dir={'sound_relay': 'py_src' },
     packages=['sound_relay'],
     data_files=[
-        ('/usr/lib/systemd/system',
-         ('sound_relay.service',)),
-        ('/usr/bin/', (get_sound_relay_exe(), ))],
+        ('/usr/lib/systemd/system', ('sound_relay.socket','sound_relay.service')),
+        ('/usr/bin/', (get_sound_relay_exe(), get_play_rtp_exe()))
+    ],
     cmdclass={'install': my_install, 'build': my_build}
 )

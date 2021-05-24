@@ -1,7 +1,11 @@
 import socket
 
-import media
-import network_interfaces
+try:
+	from . import media
+	from . import network_interfaces
+except ImportError:
+	import media
+	import network_interfaces
 
 class RtspConnection(object):
 

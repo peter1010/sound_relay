@@ -1,16 +1,22 @@
 import socket
 import select
 
-import rtsp_connection
+try:
+	from . import rtsp_connection
+except ImportError:
+	import rtsp_connection
 
 class RtspServer(object):
 
-	def __init__(self):
+	def __init__(self, sock = None):
 		self.connections = []
-		try:
-			self.init_socket(554);
-		except PermissionError:
-			self.init_socket(8554);
+		if sock is None:
+			try:
+				self.init_socket(554);
+			except PermissionError:
+				self.init_socket(8554);
+		else:
+			self.sock = sock
 		self.wait_and_process()
 
 

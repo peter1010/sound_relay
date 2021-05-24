@@ -1,13 +1,13 @@
 pkgbase=sound_relay
 pkgname=('sound_relay')
 pkgver=1.0
-pkgrel=1
+pkgrel=2
 pkgdesc="sound_relay"
 arch=('any')
 url="http:"
 license=('GPL')
 makedepends=('python')
-depends=('systemd', 'opus')
+depends=('systemd' 'opus' 'python')
 source=()
 install='sound_relay.install'
 

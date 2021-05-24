@@ -48,13 +48,13 @@ def sd_is_fifo(fd, path):
 
 def sd_is_special(fd, path):
 	st_fd = os.fstat(fd)
-	if not stat.S_ISREG(st_fd) && not stat.S_ISCHR(st_fd):
+	if not stat.S_ISREG(st_fd) and not stat.S_ISCHR(st_fd):
 		return False
 	if path:
 		st_path = os.stat(path)
-		if stat.S_ISREG(st_path) && stat.S_ISREG(st_fd):
+		if stat.S_ISREG(st_path) and stat.S_ISREG(st_fd):
 			return (st_path.st_dev == st_fd.st_dev) and (st_path.st_ino == st_fd.st_ino)
-		elif stat.S_ISCHR(st_path) && stat.S_ISCHR(st_fd):
+		elif stat.S_ISCHR(st_path) and stat.S_ISCHR(st_fd):
 			return st_path.st_rdev == st_fd.st_rdev
 		else:
 			return False

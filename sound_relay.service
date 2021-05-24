@@ -9,7 +9,7 @@ Description=Sound Relay
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/sound_relay
+ExecStart=/usr/bin/python3 -m sound_relay
 Nice=19
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7
