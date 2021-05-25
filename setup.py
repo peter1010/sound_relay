@@ -63,7 +63,8 @@ setup(
     packages=['sound_relay'],
     data_files=[
         ('/usr/lib/systemd/system', ('sound_relay.socket','sound_relay.service')),
-        ('/usr/bin/', (get_sound_relay_exe(), get_play_rtp_exe()))
+        ('/usr/bin/', (get_sound_relay_exe(), get_play_rtp_exe())),
+        ('/usr/lib/systemd/dnssd', ('sound_relay.dnssd',))
     ],
     cmdclass={'install': my_install, 'build': my_build}
 )

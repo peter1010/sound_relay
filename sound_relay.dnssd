@@ -1,0 +1,7 @@
+# see man systemd.dnssd for details
+
+[Service]
+Name=%H
+Type=_rtsp._tcp
+Port=554
+
