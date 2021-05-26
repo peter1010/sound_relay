@@ -43,17 +43,17 @@ def make_dir(path, uid, gid):
             os.chown(os.path.join(path, f), uid, gid)
 
 
-def start_service():
+def start_relay_service():
     subprocess.call(["systemctl", "enable", "sound_relay.socket"])
     subprocess.call(["systemctl", "start", "sound_relay.socket"])
 
 
-def stop_service():
+def stop_relay_service():
     subprocess.call(["systemctl", "stop", "sound_relay.socket"])
     subprocess.call(["systemctl", "disable", "sound_relay.socket"])
 
 if __name__ == "__main__":
-    if sys.argv[1] == "start":
-        start_service()
-    else:
-        stop_service()
+    if sys.argv[1] == "start_relay":
+        start_relay_service()
+    elif sys.argv[1] == "stop_relay":
+        stop_relay_service()

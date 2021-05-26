@@ -1,9 +1,9 @@
 ## arg 1:  the new package version
 post_install() {
-    python -m sound_relay.service start
+    python -m sound_relay.service start_relay
 }
 
 ## arg 1:  the old package version
 pre_remove() {
-    python -m sound_relay.service stop
+    python -m sound_relay.service stop_relay
 }

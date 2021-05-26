@@ -14,6 +14,8 @@ import sys
 from distutils.core import setup
 from distutils.command import install, build
 
+from version import VERSION
+
 def find_c_src():
     c_src = "c_src"
     for i in range(5):
@@ -36,6 +38,7 @@ class my_install(install.install):
                 service.start_service()
         return retVal
 
+
 class my_build(build.build):
     def run(self):
         retVal = super().run()
@@ -43,28 +46,22 @@ class my_build(build.build):
         return retVal
 
 
-def get_sound_relay_exe(do_compile=True):
-   return os.path.join(find_c_src(), "__%s__" % os.uname().machine, "sound_relay")
-
-
 def get_play_rtp_exe(do_compile=True):
    return os.path.join(find_c_src(), "__%s__" % os.uname().machine, "play_rtp")
 
 
 setup(
-    name='sound_relay',
-    version='1.0',
-    description="Sound Relay",
+    name='sound_player',
+    version=VERSION,
+    description="Sound Player",
     url='https://github.com/peter1010/sound_relay',
     author='Peter1010',
     author_email='peter1010@localnet',
     license='GPL',
-    package_dir={'sound_relay': 'py_src' },
-    packages=['sound_relay'],
+    package_dir={'sound_player': 'py_src' },
+    packages=['sound_player'],
     data_files=[
-        ('/usr/lib/systemd/system', ('sound_relay.socket','sound_relay.service')),
-        ('/usr/bin/', (get_sound_relay_exe(), get_play_rtp_exe())),
-        ('/usr/lib/systemd/dnssd', ('sound_relay.dnssd',))
+        ('/usr/bin/', (get_play_rtp_exe(),))
     ],
     cmdclass={'install': my_install, 'build': my_build}
 )
