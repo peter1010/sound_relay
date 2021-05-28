@@ -2,7 +2,9 @@
 #Conflicts=sound_relay.service
 
 [Socket]
+BindIPv6Only=true
 ListenStream=554
+ListenStream=0.0.0.0:554
 Backlog=1
 Accept=false
 

@@ -1,8 +1,9 @@
 import os
 import fcntl
+import socket
 
 # See man sd_listen_fds
-# See http://cgit.freedesktop.org/systemd/systemd/plain/src/libsystemd-daemon/sd-daemon.c
+# See https://cgit.freedesktop.org/systemd/systemd/tree/src/libsystemd/sd-daemon/sd-daemon.c
 
 SD_LISTEN_FDS_START=3
 
@@ -62,15 +63,44 @@ def sd_is_special(fd, path):
 
 
 def sd_is_socket(fd, family, typ, listening):
-	pass
+	st_fd = os.fstat(fd)
+	if not stat.S_ISSOCK(st_fd):
+		return False
+	sock = socket.fromfd(fd, -1, -1)
+	if family is None and family != socket.family:
+		return False
+	if typ is None and typ != socket.type:
+		return False
+	if listening is not None:
+		accepting = bool(sock.getsockopt(socket.SOL_SOCKET, socket.SO_ACCEPTCONN))
+		return accepting == listening
+	return true
 
-def sd_is_socket_inet():
-	pass
 
-def sd_is_socket_unix():
-	pass
 
-def sd_is_mq():
+def sd_is_socket_inet(fd, family, typ, listening, port):
+	st_fd = os.fstat(fd)
+	if not stat.S_ISSOCK(st_fd):
+		return False
+	sock = socket.fromfd(fd, -1, -1)
+	if family is None and family != socket.family:
+		return False
+	if typ is None and typ != socket.type:
+		return False
+	if listening is not None:
+		accepting = bool(sock.getsockopt(socket.SOL_SOCKET, socket.SO_ACCEPTCONN))
+		return accepting == listening
+
+
+def sd_is_socket_unix(fd, typ, listening, path):
+	st_fd = os.fstat(fd)
+	if not stat.S_ISSOCK(st_fd):
+		return False
+	sock = socket.fromfd(fd, -1, -1)
+	if socket.AF_UNIX != socket.family:
+		return False
+
+def sd_is_mq(fd, path):
 	pass
 
 def sd_notify():

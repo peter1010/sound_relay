@@ -58,7 +58,7 @@ def get_hostip(sock, ver):
 		raise RuntimeError()
 
 	ifaddr_saved = ifaddr
-
+	name = None
 	# Find the interface name for the local address
 	while ifaddr:
 		addr = extract_address(ifaddr[0].addr)

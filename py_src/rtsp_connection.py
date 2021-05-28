@@ -9,11 +9,11 @@ except ImportError:
 
 class RtspConnection(object):
 
-	def __init__(self, parent, connfd, peer_address):
+	def __init__(self, connfd, peer_address, listening_port):
 		self.connfd = connfd
 		self.read_buf = b''
-		self.parent = parent
 		self.peer_address = peer_address
+		self.listening_port = listening_port
 
 	def fileno(self):
 		return self.connfd.fileno()
@@ -100,7 +100,7 @@ class RtspConnection(object):
 			"t= 0 0",
 			"a=recvonly",
 			"a=control:rtsp://{0}:{1}/{2}".format(self.get_hostname(),
-			self.get_rtsp_server_port(), session.get_pathname()),
+			self.listening_port, session.get_pathname()),
 			"m=audio {0} RTP/AVP {1}".format(session.get_our_rtp_port(), pt),
 			"a=rtpmap:{0} opus/{1}/{2}".format(pt, session.get_raw_bit_rate(),
 			session.get_num_of_channels()),
@@ -197,6 +197,3 @@ class RtspConnection(object):
 
 	def get_hostname(self):
 		return socket.getfqdn()
-
-	def get_rtsp_server_port(self):
-		self.parent.get_listening_port()
