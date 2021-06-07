@@ -3,9 +3,11 @@ import socket
 try:
 	from . import media
 	from . import network_interfaces
+	from .session import ChangeNotAllowedError
 except ImportError:
 	import media
 	import network_interfaces
+	from session import ChangeNotAllowedError
 
 class RtspConnection(object):
 
@@ -29,8 +31,7 @@ class RtspConnection(object):
 			return True
 		self.read_buf = b''
 		lines = read_buf[:-4].splitlines()
-		self.parse_request(lines)
-		return True
+		return self.parse_request(lines)
 
 	def parse_request(self, lines):
 		tokens = lines[0].split()
@@ -43,22 +44,39 @@ class RtspConnection(object):
 		attributes = {}
 		for line in lines[1:]:
 			name, value = line.split(b":", 1)
+			name = name.strip()
+			value = value.strip()
 			attributes[name.lower()] = value
 		print("Recv: ", request)
 		print(attributes)
 		if request == b"OPTIONS":
-			self.parse_option_request(attributes)
-		elif request == b"DESCRIBE":
-			self.parse_describe_request(url, attributes)
-		elif request == b"SETUP":
-			 self.parse_setup_request(url, attributes)
-		elif request == b"PLAY":
-			self.parse_play_request(url, attributes)
-		else:    
-			print("Unknown request ", request);
+			return self.parse_option_request(attributes)
+		if request == b"DESCRIBE":
+			return self.parse_describe_request(url, attributes)
+		if request == b"SETUP":
+			return self.parse_setup_request(url, attributes)
+		if request == b"PLAY":
+			return self.parse_play_request(url, attributes)
+		if request == b"TEARDOWN":
+			return self.parse_teardown_request(url, attributes)
+		if request in (b"RECORD", b"ANNOUNCE",
+				b"GET_PARAMETER", b"PAUSE", b"REDIRECT",
+				b"SET_PARAMETER"):
+			return self.Error(405, attributes)
+		return self.Error(400, attributes)
 
+	def keep_alive(self, attributes):
+		if b"connection" in attributes:
+			value = attributes[b"connection"]
+			if value.lower() == b"close":
+				return False
+		return True
 
 	def parse_option_request(self, attributes):
+		if b"require" in attributes:
+			return self.Error(551, attributes)
+		if b"proxy-require" in attributes:
+			return self.Error(551, attributes)
 		lines = [
 			b"RTSP/1.0 200 OK",
 			b"CSeq: " + attributes[b"cseq"],
@@ -67,14 +85,14 @@ class RtspConnection(object):
 
 		print(lines)
 		self.connfd.send(b"\r\n".join(lines))
+		return self.keep_alive(attributes)
 
 
 	def parse_describe_request(self, url, attributes):
- #       } else if(name == "accept") {
-#	    // Check that application/sdp is an option
-#	    if(value.find("application/sdp") == std::string::npos) {
-#		// TODO
-
+		if b"require" in attributes:
+			return self.Error(551, attributes)
+		if b"proxy-require" in attributes:
+			return self.Error(551, attributes)
 
 		session = media.get_session(url)
 
@@ -108,6 +126,8 @@ class RtspConnection(object):
 		sdp = "\r\n".join(sdp)
 		sdp = sdp.encode(encoding = "UTF-8")
 
+# Content-Encoding not needed as entity is in plain text
+# Content-Language not needed as entity is applicabel to all
 		lines = [
 			b"RTSP/1.0 200 OK",
 			b"CSeq: " + attributes[b"cseq"],
@@ -116,15 +136,59 @@ class RtspConnection(object):
 			b"", b""]
 		self.connfd.send(b"\r\n".join(lines))
 		self.connfd.send(sdp)
+		return self.keep_alive(attributes)
+
+
+	def Error(self, num, attributes):
+		msgs = {
+			400 : "Bad Request",
+			405 : "Method Not Allowed",
+			454 : "Session Not Found",
+			455 : "Method Not Valid In This State",
+			459 : "Aggregate Operation Not Allowed",
+			461 : "Unsupported Transport",
+			551 : "Option not supported",
+		}
+		lines = [
+			"RTSP/1.0 {0} {1}".format(num, msgs[num]).encode(encoding = "UTF-8"),
+			b"CSeq: " + attributes[b"cseq"],
+		]
+		if num == 405:
+			lines.append(b"Allow: DESCRIBE, SETUP, PLAY, TEARDOWN")
+		if num == 551:
+			if b"require" in attributes:
+				unsupported = attributes[b"require"]
+			else:
+				unsupported = attributes[b"proxy-require"]
+			lines.append(b"Unsupported: {0}".format(unsupported).encode(encoding = "UTF-8"))
+		lines += [
+			b"", 
+			b""]
+		print(lines)
+		self.connfd.send(b"\r\n".join(lines))
+		return self.keep_alive(attributes)
 
 
 	def parse_setup_request(self, url, attributes):
+		if b"require" in attributes:
+			return self.Error(551, attributes)
+		if b"proxy-require" in attributes:
+			return self.Error(551, attributes)
 		session = media.get_session(url)
 
 		value = attributes[b"transport"]
+		# We dont do aggregated sessions...
+		if b"session" in attributes:
+			return self.Error(459, attributes)
 
 		tokens = value.split(b";")
+		for token in tokens:
+			token = token.strip()
+
 		proto = tokens[0].strip()
+
+		if proto.upper() not in (b"RTP/AVP", b"RTP/AVP/UDP"):
+			return self.Error(461, attributes)
 
 		print("proto=", proto)
 #        print(tokens)
@@ -140,19 +204,22 @@ class RtspConnection(object):
 			values[name] = value
 
 		ports = values[b"client_port"].split(b"-")
-		if len(ports) > 1:
-			session.set_peer_rtp_port(int(ports[0]))
-			session.set_peer_rtcp_port(int(ports[1]))
-		else:
-			session.set_peer_rtp_port(int(ports[0]))
-			session.set_peer_rtcp_port(int(ports[0])+1)
+		try:
+			if len(ports) > 1:
+				session.set_peer_rtp_port(int(ports[0]))
+				session.set_peer_rtcp_port(int(ports[1]))
+			else:
+				session.set_peer_rtp_port(int(ports[0]))
+				session.set_peer_rtcp_port(int(ports[0])+1)
 
-		if self.peer_address.find(".") >= 0:
-			session.set_our_address(self.get_hostip(4))
-		else:
-			session.set_our_address(self.get_hostip(6))
+			if self.peer_address.find(".") >= 0:
+				session.set_our_address(self.get_hostip(4))
+			else:
+				session.set_our_address(self.get_hostip(6))
 
-		session.add_peer_address(self.peer_address);
+			session.add_peer_address(self.peer_address);
+		except ChangeNotAllowedError as err:
+			return self.Error(455, attributes)
 
 #    // Mandatory fields:
 #    // CSeq:
@@ -167,16 +234,27 @@ class RtspConnection(object):
 		lines = [
 			b"RTSP/1.0 200 OK",
 			b"CSeq: " + attributes[b"cseq"],
-			b"Session: " + session.get_id(),
+			b"Session: " + session.get_rtp_id(),
 			b"Transport: " + transport,
 			b"", b""]
 
 		print(lines)
 		self.connfd.send(b"\r\n".join(lines))
+		return self.keep_alive(attributes)
 
 
 	def parse_play_request(self, url, attributes):
+		if b"require" in attributes:
+			return self.Error(551, attributes)
+		if b"proxy-require" in attributes:
+			return self.Error(551, attributes)
+		session_id = None
+		if b"session" in attributes:
+			session_id = attributes[b"session"]
+		print(session_id)
 		session = media.get_session(url)
+		if session.get_rtp_id() != session_id:
+			return self.Error(454, attributes)
 
 		session.play()
 
@@ -185,11 +263,27 @@ class RtspConnection(object):
 		lines = [
 			b"RTSP/1.0 200 OK",
 			b"CSeq: " + attributes[b"cseq"],
+			b"Session: " + session.get_rtp_id(),
 			b"", b""]
 
 		print(lines)
 		self.connfd.send(b"\r\n".join(lines))
+		return self.keep_alive(attributes)
 
+
+	def parse_teardown_request(self, url, attributes):
+		if b"require" in attributes:
+			return self.Error(551, attributes)
+		if b"proxy-require" in attributes:
+			return self.Error(551, attributes)
+		session_id = None
+		if b"session" in attributes:
+			session_id = attributes[b"session"]
+		session = media.get_session(url)
+		if session.get_rtp_id() != session_id:
+			return self.Error(454, attributes)
+		session.stop()
+		return self.keep_alive(attributes)
 
 
 	def get_hostip(self, ver):

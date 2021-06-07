@@ -12,8 +12,10 @@ class RtspServer(object):
 		self.connections = []
 		if sockV4 is None and sockV6 is None:
 			try:
+				print("Trying port 554")
 				self.init_socket(554);
 			except PermissionError:
+				print("Trying port 8554")
 				self.init_socket(8554);
 		else:
 			self.sockV4 = sockV4
