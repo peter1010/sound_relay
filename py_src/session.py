@@ -1,5 +1,6 @@
 import os
 import time
+import signal
 
 class ChangeNotAllowedError(Exception):
 	pass
@@ -102,4 +103,6 @@ class Session(object):
 		print("play...")
 
 	def stop(self):
-		print("TODO")
+		if self.pid:
+			os.kill(self.pid, signal.SIGINT)
+			self.pid = None

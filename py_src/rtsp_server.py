@@ -26,6 +26,10 @@ class RtspServer(object):
 				self.listening_portV6 = sockV6.getsockname()[1]
 		self.wait_and_process()
 
+	def __del__(self):
+		for conn in self.connections:
+			conn.close()
+		self.connections = []
 
 	def init_socket(self, port):
 		self.create_ipv4_socket(port, '')
@@ -57,26 +61,27 @@ class RtspServer(object):
 			poller.register(self.sockV6, select.POLLIN)
 
 		while True:
+			conn_mask = select.POLLIN
 			events = poller.poll()
 			for event, mask in events:
 				if self.sockV4 and event == self.sockV4.fileno():
-					poller.register(self.create_connection(self.sockV4, self.listening_portV4), select.POLLIN)
+					poller.register(self.create_connection(self.sockV4, self.listening_portV4), conn_mask)
 				elif self.sockV6 and event == self.sockV6.fileno():
-					poller.register(self.create_connection(self.sockV6, self.listening_portV6), select.POLLIN)
+					poller.register(self.create_connection(self.sockV6, self.listening_portV6), conn_mask)
 				else:
 					found_idx = None
 					for idx, conn in enumerate(self.connections):
 						if event == conn.fileno():
 							found_idx = idx
-							conn_awake = conn
 							break
 
 					if found_idx is not None:
-						status = conn_awake.read()
+						status = conn.read()
 						if status is False:
-							poller.unregister(conn_awake)
+							poller.unregister(conn)
 							del self.connections[found_idx]
-							del conn_awake
+							conn.close()
+							del conn
 
 
 	def create_connection(self, sock, listening_port):

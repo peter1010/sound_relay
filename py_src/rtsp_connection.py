@@ -16,6 +16,12 @@ class RtspConnection(object):
 		self.read_buf = b''
 		self.peer_address = peer_address
 		self.listening_port = listening_port
+		self.session = None
+
+	def close(self):
+		self.connfd.close()
+		if self.session:
+			self.session.stop()
 
 	def fileno(self):
 		return self.connfd.fileno()
@@ -23,7 +29,7 @@ class RtspConnection(object):
 
 	def read(self):
 		new_data = self.connfd.recv(512)
-		if not new_data:
+		if len(new_data) == 0:
 			return False
 		read_buf = self.read_buf + new_data
 		if read_buf[-4:] != b'\r\n\r\n':
@@ -94,7 +100,7 @@ class RtspConnection(object):
 		if b"proxy-require" in attributes:
 			return self.Error(551, attributes)
 
-		session = media.get_session(url)
+		session = media.get_base_session(url)
 
 #    // Mandatory fields:
 #    // CSeq:
@@ -174,13 +180,14 @@ class RtspConnection(object):
 			return self.Error(551, attributes)
 		if b"proxy-require" in attributes:
 			return self.Error(551, attributes)
-		session = media.get_session(url)
 
-		value = attributes[b"transport"]
 		# We dont do aggregated sessions...
 		if b"session" in attributes:
 			return self.Error(459, attributes)
 
+		session = media.create_session(url)
+
+		value = attributes[b"transport"]
 		tokens = value.split(b";")
 		for token in tokens:
 			token = token.strip()
@@ -221,6 +228,8 @@ class RtspConnection(object):
 		except ChangeNotAllowedError as err:
 			return self.Error(455, attributes)
 
+		self.session = session
+
 #    // Mandatory fields:
 #    // CSeq:
 #    // Session:
@@ -248,13 +257,13 @@ class RtspConnection(object):
 			return self.Error(551, attributes)
 		if b"proxy-require" in attributes:
 			return self.Error(551, attributes)
-		session_id = None
+		session = None
 		if b"session" in attributes:
 			session_id = attributes[b"session"]
-		print(session_id)
-		session = media.get_session(url)
-		if session.get_rtp_id() != session_id:
+			session = media.get_session(url, session_id)
+		if session is None:
 			return self.Error(454, attributes)
+		self.session = session
 
 		session.play()
 
@@ -276,12 +285,13 @@ class RtspConnection(object):
 			return self.Error(551, attributes)
 		if b"proxy-require" in attributes:
 			return self.Error(551, attributes)
-		session_id = None
+		session = None
 		if b"session" in attributes:
 			session_id = attributes[b"session"]
-		session = media.get_session(url)
-		if session.get_rtp_id() != session_id:
+			session = media.get_session(url, session_id)
+		if session is None:
 			return self.Error(454, attributes)
+		self.session = session
 		session.stop()
 		return self.keep_alive(attributes)
 
